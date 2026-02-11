@@ -2,53 +2,47 @@
 
 import { useEffect, useRef, useState } from "react";
 import Tooltip from "../ui/Tooltip";
+import React from "react";
+import { RollData, Message } from "@/src/models/chat";
 
-type RollData = {
-  expression: string;
-  rolls: number[];
-  modifier: number;
-  total: number;
+type ChatTabProps = {
+  messages: Message[];
+  setMessages: React.Dispatch<React.SetStateAction<Message[]>>;
 };
 
-type Message = {
-  id: string;
-  author: string;
-  content: string;
-  type: "text" | "roll";
-  rollData?: RollData;
-};
-
-function parseRoll(input: string): RollData | null {
-  const rollRegex = /(\d+)d(\d+)([+-]\d+)?/i;
-  const match = input.match(rollRegex);
-  if (!match) return null;
-
-  const quantity = parseInt(match[1]);
-  const dice = parseInt(match[2]);
-  const modifier = match[3] ? parseInt(match[3]) : 0;
-
-  const rolls: number[] = [];
-  for (let i = 0; i < quantity; i++) {
-    rolls.push(Math.floor(Math.random() * dice) + 1);
-  }
-
-  const total = rolls.reduce((sum, val) => sum + val, 0) + modifier;
-
-  return {
-    expression: match[0],
-    rolls,
-    modifier,
-    total,
-  };
-}
-
-export default function ChatTab() {
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [message, setMessage] = useState("");
+export default function ChatTab({ messages, setMessages }: ChatTabProps) {
   const [showDiceMenu, setShowDiceMenu] = useState(false);
+  const [message, setMessage] = useState("");
+  const [, setNow] = useState(Date.now());
+
+  const currentUser = "Você"; // TODO: substituir pelo usuário real quando houver autenticação
 
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const diceRef = useRef<HTMLDivElement | null>(null);
+
+  function parseRoll(input: string): RollData | null {
+    const rollRegex = /(\d+)d(\d+)([+-]\d+)?/i;
+    const match = input.match(rollRegex);
+    if (!match) return null;
+
+    const quantity = parseInt(match[1]);
+    const dice = parseInt(match[2]);
+    const modifier = match[3] ? parseInt(match[3]) : 0;
+
+    const rolls: number[] = [];
+    for (let i = 0; i < quantity; i++) {
+      rolls.push(Math.floor(Math.random() * dice) + 1);
+    }
+
+    const total = rolls.reduce((sum, val) => sum + val, 0) + modifier;
+
+    return {
+      expression: match[0],
+      rolls,
+      modifier,
+      total,
+    };
+  }
 
   function sendRoll(expression: string) {
     const rollData = parseRoll(expression);
@@ -60,6 +54,7 @@ export default function ChatTab() {
       content: rollData.expression,
       type: "roll",
       rollData,
+      createdAt: new Date(),
     };
 
     setMessages((prev) => [...prev, newMessage]);
@@ -83,6 +78,7 @@ export default function ChatTab() {
           author: "Você",
           content: message,
           type: "text",
+          createdAt: new Date(),
         },
       ]);
     }
@@ -94,6 +90,39 @@ export default function ChatTab() {
     if (e.key === "Enter") {
       handleSend();
     }
+  }
+
+  function formatTimestamp(date: Date) {
+    const now = new Date();
+    const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+    if (diffInSeconds < 60) {
+      return "agora";
+    }
+
+    const isSameDay =
+      now.getDate() === date.getDate() &&
+      now.getMonth() === date.getMonth() &&
+      now.getFullYear() === date.getFullYear();
+
+    if (!isSameDay) {
+      return (
+        date.toLocaleDateString([], {
+          day: "2-digit",
+          month: "2-digit",
+        }) +
+        " " +
+        date.toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        })
+      );
+    }
+
+    return date.toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
   }
 
   // Scroll automático
@@ -110,10 +139,7 @@ export default function ChatTab() {
   // Fechar menu de dados ao clicar fora
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
-      if (
-        diceRef.current &&
-        !diceRef.current.contains(e.target as Node)
-      ) {
+      if (diceRef.current && !diceRef.current.contains(e.target as Node)) {
         setShowDiceMenu(false);
       }
     }
@@ -136,6 +162,14 @@ export default function ChatTab() {
     return () => window.removeEventListener("keydown", handleKey);
   }, []);
 
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setNow(Date.now());
+    }, 30000); // atualiza a cada 30s
+
+    return () => clearInterval(interval);
+  }, []);
+
   return (
     <div className="flex flex-col flex-1 min-h-0">
       {/* Área mensagens */}
@@ -143,36 +177,88 @@ export default function ChatTab() {
         ref={scrollRef}
         className="flex-1 min-h-0 overflow-y-auto p-8 space-y-6"
       >
-        {messages.map((msg) => (
-          <div
-            key={msg.id}
-            className={`rounded-xl p-5 shadow-[0_0_30px_rgba(0,0,0,0.6)] ${
-              msg.type === "roll"
-                ? "bg-gradient-to-br from-[var(--bg-card)] to-[var(--bg-surface)] border border-[var(--accent)]/20"
-                : "bg-[var(--bg-card)]"
-            }`}
-          >
-            {msg.type === "roll" && msg.rollData ? (
-              <div className="space-y-2">
-                <p className="text-[var(--accent-soft)] font-medium">
-                  {msg.author} rolou {msg.rollData.expression}
-                </p>
+        {messages.map((msg, index) => {
+          const isOwn = msg.author === currentUser;
+          const isMaster = msg.author === "Mestre";
+          const previous = messages[index - 1];
+          const isGrouped = previous && previous.author === msg.author;
+          const isNewDay =
+            !previous ||
+            new Date(previous.createdAt).toDateString() !==
+              new Date(msg.createdAt).toDateString();
 
-                <p className="text-[var(--text-secondary)] text-sm">
-                  Dados: [{msg.rollData.rolls.join(", ")}]
-                </p>
+          return (
+            <React.Fragment key={msg.id}>
+              {isNewDay && (
+                <div className="flex items-center justify-center my-6">
+                  <div className="flex items-center gap-4 w-full max-w-md">
+                    <div className="flex-1 h-px bg-[var(--border-subtle)]" />
+                    <span className="text-xs text-[var(--text-muted)]">
+                      {new Date(msg.createdAt).toLocaleDateString([], {
+                        day: "2-digit",
+                        month: "2-digit",
+                        year: "numeric",
+                      })}
+                    </span>
+                    <div className="flex-1 h-px bg-[var(--border-subtle)]" />
+                  </div>
+                </div>
+              )}
 
-                <p className="text-[var(--highlight-gold)] text-xl font-semibold">
-                  Total: {msg.rollData.total}
-                </p>
+              <div
+                className={`flex ${isOwn ? "justify-end" : "justify-start"}`}
+              >
+                <div
+                  className={`
+                    max-w-[75%]
+                    rounded-xl
+                    p-4
+                    shadow-[0_0_25px_rgba(0,0,0,0.5)]
+                    transition
+                    ${
+                      isOwn
+                        ? "bg-[var(--accent)] text-white"
+                        : isMaster
+                          ? "bg-gradient-to-br from-[var(--bg-card)] to-[var(--bg-surface)] border border-[var(--accent)]/20"
+                          : "bg-[var(--bg-card)]"
+                    }
+                    ${isGrouped ? "mt-1" : "mt-4"}
+                  `}
+                >
+                  {!isGrouped && (
+                    <div className="mb-1 flex items-center gap-2">
+                      <span className="text-xs font-medium opacity-80">
+                        {msg.author}
+                      </span>
+
+                      <span className="text-[10px] font-medium opacity-60">
+                        • {formatTimestamp(msg.createdAt)}
+                      </span>
+                    </div>
+                  )}
+
+                  {msg.type === "roll" && msg.rollData ? (
+                    <div className="space-y-1">
+                      <p className="text-sm opacity-80">
+                        Rolou {msg.rollData.expression}
+                      </p>
+
+                      <p className="text-sm opacity-80">
+                        Dados: [{msg.rollData.rolls.join(", ")}]
+                      </p>
+
+                      <p className="text-lg font-semibold">
+                        Total: {msg.rollData.total}
+                      </p>
+                    </div>
+                  ) : (
+                    <p className="break-words text-sm">{msg.content}</p>
+                  )}
+                </div>
               </div>
-            ) : (
-              <p className="text-[var(--text-primary)] break-words">
-                {msg.content}
-              </p>
-            )}
-          </div>
-        ))}
+            </React.Fragment>
+          );
+        })}
       </div>
 
       {/* Input */}
@@ -198,7 +284,7 @@ export default function ChatTab() {
                   viewBox="0 0 24 24"
                   fill="currentColor"
                 >
-                  <path d="M12 2L3 7v10l9 5 9-5V7l-9-5zm0 2.3L18.7 7 12 9.7 5.3 7 12 4.3zm-7 4.9l6 2.4v7.1l-6-3.3V9.2zm14 0v6.2l-6 3.3v-7.1l6-2.4z"/>
+                  <path d="M12 2L3 7v10l9 5 9-5V7l-9-5zm0 2.3L18.7 7 12 9.7 5.3 7 12 4.3zm-7 4.9l6 2.4v7.1l-6-3.3V9.2zm14 0v6.2l-6 3.3v-7.1l6-2.4z" />
                 </svg>
               </button>
             </Tooltip>

@@ -3,9 +3,11 @@
 import { useState } from "react";
 import ChatTab from "./ChatTab";
 import CharactersTab from "./CharactersTab";
+import { Message } from "@/src/models/chat";
 
 export default function SidePanel() {
   const [activeTab, setActiveTab] = useState<"chat" | "characters">("chat");
+  const [messages, setMessages] = useState<Message[]>([]);
 
   return (
     <div className="flex flex-col h-full min-h-0 bg-[var(--bg-secondary)] border-l border-[var(--border-primary)]">
@@ -33,7 +35,7 @@ export default function SidePanel() {
         </button>
       </div>
 
-      {activeTab === "chat" ? <ChatTab /> : <CharactersTab />}
+      {activeTab === "chat" ? <ChatTab messages={messages} setMessages={setMessages}/> : <CharactersTab />}
     </div>
   );
 }
