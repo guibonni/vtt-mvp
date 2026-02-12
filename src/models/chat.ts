@@ -1,3 +1,5 @@
+import { DiceResult } from "../utils/dice";
+
 export type RollData = {
   expression: string;
   rolls: number[];
@@ -8,8 +10,8 @@ export type RollData = {
 export type Message = {
   id: string;
   author: string;
-  content: string;
   type: "text" | "roll";
-  rollData?: RollData;
+  content?: string;
+  rollData?: DiceResult;
   createdAt: Date;
 };

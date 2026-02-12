@@ -5,13 +5,18 @@ import { useState } from "react";
 import CharacterCard from "./CharacterCard";
 import ConfirmModal from "../ui/ConfirmModal";
 import CharacterModal from "./CharacterModal";
+import { CharacterTemplate } from "@/src/models/template";
+import { DiceResult } from "@/src/utils/dice";
 
 type Props = {
   characters: Character[];
   setCharacters: React.Dispatch<React.SetStateAction<Character[]>>;
+  templates: CharacterTemplate[];
+  onRoll: (result: DiceResult) => void;
 };
 
-export default function CharactersTab({ characters, setCharacters }: Props) {
+
+export default function CharactersTab({ characters, setCharacters, templates, onRoll }: Props) {
   const [confirmId, setConfirmId] = useState<string | null>(null);
   const [selectedCharacter, setSelectedCharacter] = useState<Character | null>(
     null,
@@ -67,7 +72,9 @@ export default function CharactersTab({ characters, setCharacters }: Props) {
       <CharacterModal
         isOpen={isModalOpen}
         character={selectedCharacter}
+        templates={templates}
         onClose={() => setIsModalOpen(false)}
+        onRoll={onRoll}
         onSave={(updated) => {
           setCharacters((prev) => {
             const exists = prev.find((c) => c.id === updated.id);
