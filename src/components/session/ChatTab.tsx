@@ -3,8 +3,9 @@
 import { useEffect, useRef, useState } from "react";
 import Tooltip from "../ui/Tooltip";
 import React from "react";
-import { RollData, Message } from "@/src/models/chat";
+import { Message } from "@/src/models/chat";
 import { useEscapeKey } from "@/src/hooks/useEscapeKey";
+import { rollExpression } from "@/src/utils/dice";
 
 type ChatTabProps = {
   messages: Message[];
@@ -21,44 +22,30 @@ export default function ChatTab({ messages, setMessages }: ChatTabProps) {
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const diceRef = useRef<HTMLDivElement | null>(null);
 
-  function parseRoll(input: string): RollData | null {
-    const rollRegex = /(\d+)d(\d+)([+-]\d+)?/i;
-    const match = input.match(rollRegex);
-    if (!match) return null;
-
-    const quantity = parseInt(match[1]);
-    const dice = parseInt(match[2]);
-    const modifier = match[3] ? parseInt(match[3]) : 0;
-
-    const rolls: number[] = [];
-    for (let i = 0; i < quantity; i++) {
-      rolls.push(Math.floor(Math.random() * dice) + 1);
-    }
-
-    const total = rolls.reduce((sum, val) => sum + val, 0) + modifier;
-
-    return {
-      expression: match[0],
-      rolls,
-      modifier,
-      total,
-    };
-  }
-
   function sendRoll(expression: string) {
-    const rollData = parseRoll(expression);
-    if (!rollData) return;
+    // Separar modificador se existir (ex: 1d20+5)
+    const match = expression.match(/^(\d+d\d+)([+-]\d+)?$/);
+
+    if (!match) return;
+
+    const dicePart = match[1];
+    const modifier = match[2] ? Number(match[2]) : 0;
+
+    const result = rollExpression(dicePart, modifier);
+
+    if (!result) return;
 
     const newMessage: Message = {
       id: crypto.randomUUID(),
       author: "Você",
-      content: rollData.expression,
       type: "roll",
-      rollData,
+      rollData: result,
       createdAt: new Date(),
     };
 
     setMessages((prev) => [...prev, newMessage]);
+    setMessage("");
+    return;
   }
 
   function rollDice(sides: number) {
