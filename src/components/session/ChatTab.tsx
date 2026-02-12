@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Tooltip from "../ui/Tooltip";
 import React from "react";
 import { RollData, Message } from "@/src/models/chat";
+import { useEscapeKey } from "@/src/hooks/useEscapeKey";
 
 type ChatTabProps = {
   messages: Message[];
@@ -150,17 +151,7 @@ export default function ChatTab({ messages, setMessages }: ChatTabProps) {
     };
   }, []);
 
-  // Fechar menu de dados com Escape
-  useEffect(() => {
-    function handleKey(e: KeyboardEvent) {
-      if (e.key === "Escape") {
-        setShowDiceMenu(false);
-      }
-    }
-
-    window.addEventListener("keydown", handleKey);
-    return () => window.removeEventListener("keydown", handleKey);
-  }, []);
+  useEscapeKey(true, setShowDiceMenu.bind(null, false));
 
   useEffect(() => {
     const interval = setInterval(() => {

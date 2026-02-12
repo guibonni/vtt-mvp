@@ -2,12 +2,14 @@
 
 import { useState } from "react";
 import ChatTab from "./ChatTab";
-import CharactersTab from "./CharactersTab";
+import CharactersTab from "../characters/CharactersTab";
 import { Message } from "@/src/models/chat";
+import { Character } from "@/src/models/character";
 
 export default function SidePanel() {
   const [activeTab, setActiveTab] = useState<"chat" | "characters">("chat");
   const [messages, setMessages] = useState<Message[]>([]);
+  const [characters, setCharacters] = useState<Character[]>([]);
 
   return (
     <div className="flex flex-col h-full min-h-0 bg-[var(--bg-secondary)] border-l border-[var(--border-primary)]">
@@ -35,7 +37,11 @@ export default function SidePanel() {
         </button>
       </div>
 
-      {activeTab === "chat" ? <ChatTab messages={messages} setMessages={setMessages}/> : <CharactersTab />}
+      {activeTab === "chat" ? (
+        <ChatTab messages={messages} setMessages={setMessages} />
+      ) : (
+        <CharactersTab characters={characters} setCharacters={setCharacters} />
+      )}
     </div>
   );
 }
