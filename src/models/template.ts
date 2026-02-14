@@ -8,7 +8,7 @@ export type TemplateField = {
   label: string;
   type: FieldType;
   columnSpan: number; // 1 - 12,
-  dice?: string
+  dice?: string;
 };
 
 export type TemplateSection = {

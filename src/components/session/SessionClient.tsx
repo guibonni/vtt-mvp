@@ -19,15 +19,29 @@ export default function SessionClient({ sessionId }: { sessionId: string }) {
   const [availableTemplates] = useState<CharacterTemplate[]>(templates);
 
   function sendRollMessage(result: DiceResult) {
-    const newMessage: Message = {
-      id: crypto.randomUUID(),
-      author: "Você",
-      type: "roll",
-      rollData: result,
-      createdAt: new Date(),
-    };
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: crypto.randomUUID(),
+        author: "Você",
+        type: "roll",
+        rollData: result,
+        createdAt: new Date(),
+      }
+    ]);
+  }
 
-    setMessages((prev) => [...prev, newMessage]);
+  function sendMessage(message: string) {
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: crypto.randomUUID(),
+        author: "Você",
+        content: message,
+        type: "text",
+        createdAt: new Date(),
+      },
+    ]);
   }
 
   return (
@@ -46,6 +60,7 @@ export default function SessionClient({ sessionId }: { sessionId: string }) {
             setIsCharacterModalOpen(true);
           }}
           onRoll={sendRollMessage}
+          onSendMessage={sendMessage}
           characters={characters}
           setCharacters={setCharacters}
           templates={availableTemplates}
@@ -58,6 +73,7 @@ export default function SessionClient({ sessionId }: { sessionId: string }) {
           templates={templates}
           onClose={() => setIsCharacterModalOpen(false)}
           onRoll={sendRollMessage}
+          onSendMessage={sendMessage}
           onSave={(updated) => {
             setCharacters((prev) => {
               const exists = prev.find((c) => c.id === updated.id);

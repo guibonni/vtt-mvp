@@ -62,6 +62,16 @@ export const daggerheartTemplate: CharacterTemplate = {
       ],
     },
     {
+      id: "skills",
+      title: "Habilidades",
+      fields: [ 
+        { id: "skill1", label: "Habilidade 1", type: "textarea", columnSpan: 6 },
+        { id: "skill2", label: "Habilidade 2", type: "textarea", columnSpan: 6 },
+        { id: "skill3", label: "Habilidade 3", type: "textarea", columnSpan: 6 },
+        { id: "skill4", label: "Habilidade 4", type: "textarea", columnSpan: 6 }
+      ]
+    },
+    {
       id: "story",
       title: "História",
       fields: [

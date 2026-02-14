@@ -15,6 +15,7 @@ type Props = {
   onClose: () => void;
   onSave: (character: Character) => void;
   onDelete: (id: string) => void;
+  onSendMessage: (content: string) => void;
 };
 
 export default function CharacterModal({
@@ -25,6 +26,7 @@ export default function CharacterModal({
   onSave,
   onDelete,
   onRoll,
+  onSendMessage
 }: Props) {
   const isEditMode = !!character;
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -230,7 +232,23 @@ export default function CharacterModal({
                           }}
                           className="space-y-1"
                         >
-                          <label className="text-xs font-medium opacity-70">
+                          <label
+                            onClick={() => {
+                              const value = values[field.id];
+
+                              if (value === undefined || value === "") return;
+
+                              onSendMessage(`${field.label}: ${value}`);
+                            }}
+                            className="
+                              block
+                              text-xs font-medium opacity-70
+                              cursor-pointer
+                              hover:opacity-100
+                              hover:text-[var(--accent)]
+                              transition
+                            "
+                          >
                             {field.label}
                           </label>
 
@@ -259,19 +277,7 @@ export default function CharacterModal({
                                     [field.id]: Number(e.target.value),
                                   })
                                 }
-                                className="
-                                  flex-1
-                                  min-w-0
-                                  px-3 py-2
-                                  bg-[var(--bg-surface)]
-                                  border border-[var(--border-subtle)]
-                                  rounded-md
-                                  text-sm
-                                  text-center
-                                  focus:border-[var(--accent)]/50
-                                  outline-none
-                                  transition
-                                "
+                                className="flex-1 min-w-0 px-3 py-2 bg-[var(--bg-surface)] border border-[var(--border-subtle)] rounded-md text-sm text-center focus:border-[var(--accent)]/50 outline-none transition"
                               />
 
                               {field.dice && (
@@ -286,16 +292,7 @@ export default function CharacterModal({
                                     if (!result) return;
                                     onRoll(result);
                                   }}
-                                  className="
-                                    shrink-0
-                                    w-8 h-8
-                                    flex items-center justify-center
-                                    rounded-md
-                                    bg-[var(--bg-surface)]
-                                    border border-[var(--border-subtle)]
-                                    hover:border-[var(--accent)]/40
-                                    transition
-                                  "
+                                  className="shrink-0 w-8 h-8 flex items-center justify-center rounded-md bg-[var(--bg-surface)] border border-[var(--border-subtle)] hover:border-[var(--accent)]/40 transition"
                                 >
                                   <svg
                                     className="w-4 h-4 opacity-70 hover:opacity-100"

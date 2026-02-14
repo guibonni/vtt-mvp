@@ -12,6 +12,7 @@ type Props = {
   onOpenCharacter: (character: Character) => void;
   onCreateCharacter: () => void;
   onRoll: (result: DiceResult) => void;
+  onSendMessage: (content: string) => void;
   characters: Character[];
   setCharacters: React.Dispatch<React.SetStateAction<Character[]>>;
   templates: CharacterTemplate[];
@@ -19,7 +20,7 @@ type Props = {
   setMessages: React.Dispatch<React.SetStateAction<Message[]>>;
 };
 
-export default function SidePanel({ onOpenCharacter, onCreateCharacter, onRoll, characters, setCharacters, templates, messages, setMessages }: Props) {
+export default function SidePanel({ onOpenCharacter, onCreateCharacter, onRoll, onSendMessage, characters, setCharacters, templates, messages, setMessages }: Props) {
   const [activeTab, setActiveTab] = useState<"chat" | "characters">("chat");
 
   return (
@@ -49,7 +50,11 @@ export default function SidePanel({ onOpenCharacter, onCreateCharacter, onRoll, 
       </div>
 
       {activeTab === "chat" ? (
-        <ChatTab messages={messages} setMessages={setMessages} />
+        <ChatTab
+          messages={messages}
+          setMessages={setMessages}
+          onSendMessage={onSendMessage} 
+        />
       ) : (
         <CharactersTab
           characters={characters}

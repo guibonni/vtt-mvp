@@ -10,9 +10,10 @@ import { rollExpression } from "@/src/utils/dice";
 type ChatTabProps = {
   messages: Message[];
   setMessages: React.Dispatch<React.SetStateAction<Message[]>>;
+  onSendMessage: (content: string) => void;
 };
 
-export default function ChatTab({ messages, setMessages }: ChatTabProps) {
+export default function ChatTab({ messages, setMessages, onSendMessage }: ChatTabProps) {
   const [showDiceMenu, setShowDiceMenu] = useState(false);
   const [message, setMessage] = useState("");
   const [, setNow] = useState(Date.now());
@@ -59,16 +60,7 @@ export default function ChatTab({ messages, setMessages }: ChatTabProps) {
     if (message.startsWith("/roll")) {
       sendRoll(message.replace("/roll ", ""));
     } else {
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: crypto.randomUUID(),
-          author: "Você",
-          content: message,
-          type: "text",
-          createdAt: new Date(),
-        },
-      ]);
+      onSendMessage(message);
     }
 
     setMessage("");
