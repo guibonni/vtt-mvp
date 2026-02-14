@@ -4,7 +4,6 @@ import { Character } from "@/src/models/character";
 import { useState } from "react";
 import CharacterCard from "./CharacterCard";
 import ConfirmModal from "../ui/ConfirmModal";
-import CharacterModal from "./CharacterModal";
 import { CharacterTemplate } from "@/src/models/template";
 import { DiceResult } from "@/src/utils/dice";
 
@@ -13,15 +12,12 @@ type Props = {
   setCharacters: React.Dispatch<React.SetStateAction<Character[]>>;
   templates: CharacterTemplate[];
   onRoll: (result: DiceResult) => void;
+  onOpenCharacter: (character: Character) => void;
+  onCreateCharacter: () => void;
 };
 
-
-export default function CharactersTab({ characters, setCharacters, templates, onRoll }: Props) {
+export default function CharactersTab({ characters, setCharacters, templates, onRoll, onOpenCharacter, onCreateCharacter }: Props) {
   const [confirmId, setConfirmId] = useState<string | null>(null);
-  const [selectedCharacter, setSelectedCharacter] = useState<Character | null>(
-    null,
-  );
-  const [isModalOpen, setIsModalOpen] = useState(false);
 
   function handleDelete(id: string) {
     setCharacters((prev) => prev.filter((c) => c.id !== id));
@@ -31,26 +27,14 @@ export default function CharactersTab({ characters, setCharacters, templates, on
     <div className="flex flex-col flex-1 min-h-0 p-6 overflow-y-auto space-y-4">
       <div className="flex items-center justify-between">
         <span className="text-sm font-medium opacity-70">Personagens</span>
-
-        <button
-          onClick={() => {
-            setSelectedCharacter(null);
-            setIsModalOpen(true);
-          }}
-          className="px-3 py-1 text-sm bg-[var(--accent)] hover:bg-[var(--accent-hover)] rounded-md transition"
-        >
-          + Novo
-        </button>
+        <button onClick={onCreateCharacter}>+ Novo</button>
       </div>
 
       {characters.map((character) => (
         <CharacterCard
           key={character.id}
           character={character}
-          onClick={() => {
-            setSelectedCharacter(character);
-            setIsModalOpen(true);
-          }}
+          onClick={() => onOpenCharacter(character)}
         />
       ))}
 
@@ -67,26 +51,6 @@ export default function CharactersTab({ characters, setCharacters, templates, on
           }
           setConfirmId(null);
         }}
-      />
-
-      <CharacterModal
-        isOpen={isModalOpen}
-        character={selectedCharacter}
-        templates={templates}
-        onClose={() => setIsModalOpen(false)}
-        onRoll={onRoll}
-        onSave={(updated) => {
-          setCharacters((prev) => {
-            const exists = prev.find((c) => c.id === updated.id);
-            if (exists) {
-              return prev.map((c) => (c.id === updated.id ? updated : c));
-            }
-            return [...prev, updated];
-          });
-        }}
-        onDelete={(id) =>
-          setCharacters((prev) => prev.filter((c) => c.id !== id))
-        }
       />
     </div>
   );
