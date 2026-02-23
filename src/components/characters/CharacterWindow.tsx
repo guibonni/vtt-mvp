@@ -37,23 +37,64 @@ export default function CharacterWindow({ title, children, footer }: Props) {
       style={{ top: position.y, left: position.x }}
       className={`
         fixed
-        w-[800px]
         bg-[var(--bg-card)]
         border border-[var(--border-subtle)]
         rounded-xl
-        shadow-[0_0_40px_rgba(0,0,0,0.7)]
         flex flex-col
         z-50
-        transition-all duration-200
-        ${isMinimized ? "h-auto" : "max-h-[90vh]"}
+        transition-[width,height] duration-300 ease-in-out
+        overflow-hidden
+        ${isMinimized ? "w-fit h-auto opacity-95" : "w-[800px] max-h-[90vh] opacity-100"}
+        ${isMinimized ? "shadow-[0_0_20px_rgba(0,0,0,0.5)]" : "shadow-[0_0_40px_rgba(0,0,0,0.7)]"}
       `}
     >
       <div
         onMouseDown={handleMouseDown}
         onDoubleClick={() => setIsMinimized((prev) => !prev)}
-        className="p-4 border-b border-[var(--border-subtle)] cursor-move select-none"
+        className={`
+          border-b border-[var(--border-subtle)]
+          cursor-move select-none
+          flex justify-between items-center
+          transition-all duration-300 ease-in-out
+          ${isMinimized ? "px-4 py-2" : "p-4"}
+        `}
       >
-        <div className="text-lg font-medium">{title}</div>
+        <div className="text-lg font-medium whitespace-nowrap">
+          {title}
+        </div>
+
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation(); // evita disparar drag
+            setIsMinimized((prev) => !prev);
+          }}
+          className="
+            ml-4
+            opacity-60 hover:opacity-100
+            transition
+          "
+        >
+          {isMinimized ? (
+            // Ícone expandir
+            <svg
+              className="w-4 h-4"
+              viewBox="0 0 24 24"
+              fill="currentColor"
+            >
+              <path d="M7 14l5-5 5 5H7z" />
+            </svg>
+          ) : (
+            // Ícone minimizar
+            <svg
+              className="w-4 h-4"
+              viewBox="0 0 24 24"
+              fill="currentColor"
+            >
+              <path d="M7 10l5 5 5-5H7z" />
+            </svg>
+          )}
+        </button>
       </div>
 
       {!isMinimized && (
