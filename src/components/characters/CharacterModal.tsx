@@ -1,14 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Character } from "@/src/models/character";
-import ConfirmModal from "@/src/components/ui/ConfirmModal";
-import { useEscapeKey } from "@/src/hooks/useEscapeKey";
 import { CharacterTemplate } from "@/src/models/template";
 import { DiceResult } from "@/src/utils/dice";
+
 import CharacterWindow from "./CharacterWindow";
-import CharacterFooter from "./CharacterFooter";
 import CharacterForm from "./CharacterForm";
+import CharacterFooter from "./CharacterFooter";
+import ConfirmModal from "@/src/components/ui/ConfirmModal";
+import { useEscapeKey } from "@/src/hooks/useEscapeKey";
+import { useCharacterForm } from "@/src/hooks/useCharacterForm";
 
 type Props = {
   isOpen: boolean;
@@ -29,86 +31,42 @@ export default function CharacterModal({
   onSave,
   onDelete,
   onRoll,
-  onSendMessage
+  onSendMessage,
 }: Props) {
-  const isEditMode = !!character;
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const [selectedTemplateId, setSelectedTemplateId] = useState<string>("");
-  const [values, setValues] = useState<Record<string, any>>({});
-  const [name, setName] = useState("");
-  const [nameError, setNameError] = useState(false);
-  const [position, setPosition] = useState({ x: 200, y: 100 });
-  const [isMinimized, setIsMinimized] = useState(false);
-
-  const selectedTemplate = templates.find((t) => t.id === selectedTemplateId);
-
-  const [form, setForm] = useState({
-    name: "",
-    owner: "Você",
-  });
 
   useEscapeKey(isOpen, onClose);
 
-  // Preenche quando abre
-  useEffect(() => {
-    if (isOpen && character) {
-      setName(character.name);
-      setSelectedTemplateId(character.templateId);
-      setValues(character.values || {});
-    }
-
-    if (isOpen && !character) {
-      const defaultTemplate = templates[0];
-
-      setSelectedTemplateId(defaultTemplate.id);
-      setName("");
-      setValues({});
-    }
-
-    if (!isOpen) {
-      resetModalState();
-    }
-  }, [isOpen, character, templates]);
-
-  function resetModalState() {
-    setName("");
-    setNameError(false);
-    setValues({});
-    setSelectedTemplateId("");
-  }
-
-  function handleSubmit() {
-    if (!name.trim()) {
-      setNameError(true);
-      return;
-    }
-
-    if (!selectedTemplate) return;
-
-    const updatedCharacter: Character = {
-      id: character?.id || crypto.randomUUID(),
-      name: name.trim(),
-      templateId: selectedTemplate.id,
-      values,
-      owner: "Você",
-      createdAt: character?.createdAt || new Date(),
-    };
-
-    onSave(updatedCharacter);
-    onClose();
-  }
+  const {
+    isEditMode,
+    name,
+    setName,
+    nameError,
+    clearNameError,
+    selectedTemplateId,
+    setSelectedTemplateId,
+    values,
+    setValues,
+    submit,
+  } = useCharacterForm({
+    isOpen,
+    character,
+    templates,
+    onSave,
+    onClose,
+  });
 
   if (!isOpen) return null;
 
   return (
     <>
       <CharacterWindow
-        title={isEditMode ? "Editar Personagem" : "Criar Personagem"}
+        title={isEditMode ? name : "Criar Personagem"}
         footer={
           <CharacterFooter
             isEditMode={isEditMode}
             onClose={onClose}
-            onSubmit={handleSubmit}
+            onSubmit={submit}
             onDeleteClick={() => setConfirmDelete(true)}
           />
         }
@@ -118,7 +76,7 @@ export default function CharacterModal({
           name={name}
           setName={setName}
           nameError={nameError}
-          clearNameError={() => setNameError(false)}
+          clearNameError={clearNameError}
           templates={templates}
           selectedTemplateId={selectedTemplateId}
           setSelectedTemplateId={setSelectedTemplateId}
