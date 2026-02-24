@@ -4,19 +4,14 @@ import { Character } from "@/src/models/character";
 import { useState } from "react";
 import CharacterCard from "./CharacterCard";
 import ConfirmModal from "../ui/ConfirmModal";
-import { CharacterTemplate } from "@/src/models/template";
-import { DiceResult } from "@/src/utils/dice";
 
 type Props = {
   characters: Character[];
   setCharacters: React.Dispatch<React.SetStateAction<Character[]>>;
-  templates: CharacterTemplate[];
-  onRoll: (result: DiceResult) => void;
-  onOpenCharacter: (character: Character) => void;
-  onCreateCharacter: () => void;
+  onOpenCharacter: (character: Character | null) => void;
 };
 
-export default function CharactersTab({ characters, setCharacters, templates, onRoll, onOpenCharacter, onCreateCharacter }: Props) {
+export default function CharactersTab({ characters, setCharacters, onOpenCharacter }: Props) {
   const [confirmId, setConfirmId] = useState<string | null>(null);
 
   function handleDelete(id: string) {
@@ -27,7 +22,7 @@ export default function CharactersTab({ characters, setCharacters, templates, on
     <div className="flex flex-col flex-1 min-h-0 p-6 overflow-y-auto space-y-4">
       <div className="flex items-center justify-between">
         <span className="text-sm font-medium opacity-70">Personagens</span>
-        <button onClick={onCreateCharacter}>+ Novo</button>
+        <button onClick={() => onOpenCharacter(null)}>+ Novo</button>
       </div>
 
       {characters.map((character) => (

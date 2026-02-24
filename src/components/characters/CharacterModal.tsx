@@ -21,6 +21,9 @@ type Props = {
   onSave: (character: Character) => void;
   onDelete: (id: string) => void;
   onSendMessage: (content: string) => void;
+  zIndex?: number;
+  onFocus?: () => void;
+  isActive?: boolean;
 };
 
 export default function CharacterModal({
@@ -32,6 +35,9 @@ export default function CharacterModal({
   onDelete,
   onRoll,
   onSendMessage,
+  zIndex,
+  onFocus,
+  isActive,
 }: Props) {
   const [confirmDelete, setConfirmDelete] = useState(false);
 
@@ -62,6 +68,9 @@ export default function CharacterModal({
     <>
       <CharacterWindow
         title={isEditMode ? name : "Criar Personagem"}
+        zIndex={zIndex}
+        isActive={isActive}
+        onFocus={onFocus}
         footer={
           <CharacterFooter
             isEditMode={isEditMode}

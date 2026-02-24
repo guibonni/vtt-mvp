@@ -6,9 +6,12 @@ type Props = {
   title: string;
   children: React.ReactNode;
   footer?: React.ReactNode;
+  zIndex?: number;
+  onFocus?: () => void;
+  isActive?: boolean;
 };
 
-export default function CharacterWindow({ title, children, footer }: Props) {
+export default function CharacterWindow({ title, children, footer, zIndex, onFocus, isActive }: Props) {
   const [position, setPosition] = useState({ x: 200, y: 100 });
   const [isMinimized, setIsMinimized] = useState(false);
 
@@ -34,18 +37,24 @@ export default function CharacterWindow({ title, children, footer }: Props) {
 
   return (
     <div
-      style={{ top: position.y, left: position.x }}
+      onMouseDown={onFocus}
+      style={{
+        top: position.y,
+        left: position.x,
+        zIndex: zIndex ?? 50,
+      }}
       className={`
         fixed
+        overflow-hidden
         bg-[var(--bg-card)]
-        border border-[var(--border-subtle)]
         rounded-xl
         flex flex-col
-        z-50
         transition-[width,height] duration-300 ease-in-out
-        overflow-hidden
+        ${isActive
+          ? "border border-[var(--accent)] shadow-[0_0_10px_rgba(124,58,237,0.35)]"
+          : "border border-[var(--border-subtle)] shadow-[0_0_10px_rgba(0,0,0,0.6)]"
+        }
         ${isMinimized ? "w-fit h-auto opacity-95" : "w-[800px] max-h-[90vh] opacity-100"}
-        ${isMinimized ? "shadow-[0_0_20px_rgba(0,0,0,0.5)]" : "shadow-[0_0_40px_rgba(0,0,0,0.7)]"}
       `}
     >
       <div
