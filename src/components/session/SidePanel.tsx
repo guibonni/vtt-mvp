@@ -3,19 +3,8 @@
 import { useState } from "react";
 import ChatTab from "./ChatTab";
 import CharactersTab from "../characters/CharactersTab";
-import { Character } from "@/src/models/character";
-import { Message } from "@/src/models/chat";
 
-type Props = {
-  onOpenCharacter: (character: Character | null) => void;
-  onSendMessage: (content: string) => void;
-  characters: Character[];
-  setCharacters: React.Dispatch<React.SetStateAction<Character[]>>;
-  messages: Message[];
-  setMessages: React.Dispatch<React.SetStateAction<Message[]>>;
-};
-
-export default function SidePanel({ onOpenCharacter, onSendMessage, characters, setCharacters, messages, setMessages }: Props) {
+export default function SidePanel() {
   const [activeTab, setActiveTab] = useState<"chat" | "characters">("chat");
 
   return (
@@ -43,17 +32,9 @@ export default function SidePanel({ onOpenCharacter, onSendMessage, characters, 
       </div>
 
       {activeTab === "chat" ? (
-        <ChatTab
-          messages={messages}
-          setMessages={setMessages}
-          onSendMessage={onSendMessage}
-        />
+        <ChatTab />
       ) : (
-        <CharactersTab
-          characters={characters}
-          setCharacters={setCharacters}
-          onOpenCharacter={onOpenCharacter}
-        />
+        <CharactersTab />
       )}
     </div>
   );

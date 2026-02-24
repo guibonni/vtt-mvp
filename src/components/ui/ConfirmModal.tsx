@@ -26,7 +26,7 @@ export default function ConfirmModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 transition-opacity duration-200">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-200 transition-opacity duration-200">
       <div className="bg-[var(--bg-card)] border border-[var(--border-subtle)] rounded-xl p-6 w-80 shadow-[0_0_40px_rgba(0,0,0,0.7)] space-y-4 transform transition-all duration-200 scale-100">
         <div className="text-lg font-medium">{title}</div>
 
