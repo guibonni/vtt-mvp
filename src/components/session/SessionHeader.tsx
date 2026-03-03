@@ -2,8 +2,10 @@ import Tooltip from "../ui/Tooltip";
 
 export default function SessionHeader({
   sessionId,
+  onUploadClick,
 }: {
   sessionId: string;
+  onUploadClick: () => void;
 }) {
   return (
     <header className="h-14 flex items-center justify-between px-8 bg-[var(--bg-secondary)] border-b border-[var(--border-primary)]">
@@ -13,7 +15,10 @@ export default function SessionHeader({
 
       <div className="flex gap-3">
         <Tooltip content="Upload de mapa" position="bottom">
-          <button className="px-4 py-1.5 text-sm bg-[var(--accent)] rounded-md hover:bg-[var(--accent-hover)] transition">
+          <button
+            onClick={onUploadClick}
+            className="px-4 py-1.5 text-sm bg-[var(--accent)] rounded-md hover:bg-[var(--accent-hover)] transition"
+          >
             Upload
           </button>
         </Tooltip>
