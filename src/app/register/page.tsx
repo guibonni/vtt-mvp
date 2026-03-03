@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 
 export default function RegisterPage() {
+    const router = useRouter();
     const [isVisible, setIsVisible] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
 
@@ -35,7 +37,8 @@ export default function RegisterPage() {
         setIsLoading(true);
 
         await new Promise((resolve) => setTimeout(resolve, 1500));
-
+        document.cookie = "auth_token=mock-token; Path=/; Max-Age=86400; SameSite=Lax";
+        router.push("/sessions");
         setIsLoading(false);
     }
 

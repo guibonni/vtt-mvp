@@ -18,9 +18,12 @@ export default function SessionHeader({
           </button>
         </Tooltip>
 
-        <button className="px-4 py-1.5 text-sm bg-[var(--bg-card)] border border-[var(--border-subtle)] rounded-md hover:border-[var(--accent)]/40 transition">
+        <a
+          href="/sessions"
+          className="px-4 py-1.5 text-sm bg-[var(--bg-card)] border border-[var(--border-subtle)] rounded-md hover:border-[var(--accent)]/40 transition"
+        >
           Sair
-        </button>
+        </a>
       </div>
     </header>
   );

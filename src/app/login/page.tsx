@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -19,7 +21,8 @@ export default function LoginPage() {
 
     // Simulação de autenticação
     await new Promise((resolve) => setTimeout(resolve, 1500));
-
+    document.cookie = "auth_token=mock-token; Path=/; Max-Age=86400; SameSite=Lax";
+    router.push("/sessions");
     setIsLoading(false);
   }
 
