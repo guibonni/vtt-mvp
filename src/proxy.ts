@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-const PUBLIC_ROUTES = new Set(["/login", "/register"]);
+const PUBLIC_ROUTES = new Set(["/", "/login", "/register"]);
 const PUBLIC_FILE = /\.(.*)$/;
 
 export function proxy(request: NextRequest) {
