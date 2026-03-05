@@ -1,8 +1,8 @@
 export type Character = {
   id: string;
-  name: string; // obrigatório
+  name: string;
   templateId: string;
-  values: Record<string, any>;
+  values: Record<string, unknown>;
   owner: string;
   createdAt: Date;
 };

@@ -1,15 +1,23 @@
 "use client";
 
-import { rollExpression } from "@/src/utils/dice";
-import { DiceResult } from "@/src/utils/dice";
+import { TemplateField as CharacterTemplateField } from "@/src/models/template";
+import { DiceResult, rollExpression } from "@/src/utils/dice";
 
 type Props = {
-  field: any;
-  value: any;
-  setValue: (value: any) => void;
+  field: CharacterTemplateField;
+  value: unknown;
+  setValue: (value: unknown) => void;
   onRoll: (result: DiceResult) => void;
   onSendMessage: (content: string) => void;
 };
+
+function asText(value: unknown) {
+  return typeof value === "string" ? value : "";
+}
+
+function asNumber(value: unknown) {
+  return typeof value === "number" ? value : 0;
+}
 
 export default function TemplateField({
   field,
@@ -23,7 +31,7 @@ export default function TemplateField({
       <label
         onClick={() => {
           if (value === undefined || value === "") return;
-          onSendMessage(`${field.label}: ${value}`);
+          onSendMessage(`${field.label}: ${String(value)}`);
         }}
         className="block text-xs font-medium opacity-70 cursor-pointer hover:text-[var(--accent)] transition"
       >
@@ -33,7 +41,7 @@ export default function TemplateField({
       {field.type === "text" && (
         <input
           type="text"
-          value={value || ""}
+          value={asText(value)}
           onChange={(e) => setValue(e.target.value)}
           className="w-full px-3 py-2 bg-[var(--bg-surface)] border border-[var(--border-subtle)] rounded-md text-sm"
         />
@@ -43,7 +51,7 @@ export default function TemplateField({
         <div className="flex items-center gap-2">
           <input
             type="number"
-            value={value || 0}
+            value={asNumber(value)}
             onChange={(e) => setValue(Number(e.target.value))}
             className="flex-1 px-3 py-2 bg-[var(--bg-surface)] border border-[var(--border-subtle)] rounded-md text-sm text-center"
           />
@@ -52,13 +60,13 @@ export default function TemplateField({
             <button
               type="button"
               onClick={() => {
-                const result = rollExpression(field.dice!, value || 0);
+                const result = rollExpression(field.dice ?? "d20", asNumber(value));
                 if (!result) return;
                 onRoll(result);
               }}
               className="w-8 h-8 flex items-center justify-center rounded-md bg-[var(--bg-surface)] border border-[var(--border-subtle)]"
             >
-              🎲
+              d
             </button>
           )}
         </div>
@@ -66,7 +74,7 @@ export default function TemplateField({
 
       {field.type === "textarea" && (
         <textarea
-          value={value || ""}
+          value={asText(value)}
           onChange={(e) => setValue(e.target.value)}
           className="w-full px-3 py-2 bg-[var(--bg-surface)] border border-[var(--border-subtle)] rounded-md text-sm resize-none"
           rows={3}
