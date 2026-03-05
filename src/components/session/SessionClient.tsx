@@ -3,7 +3,7 @@
 import SessionHeader from "./SessionHeader";
 import MapArea from "./MapArea";
 import SidePanel from "./SidePanel";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Character } from "@/src/models/character";
 import { Message } from "@/src/models/chat";
 import { DiceResult } from "@/src/utils/dice";
@@ -23,6 +23,7 @@ import {
 import { WindowManagerProvider } from "@/src/windowing/WindowManagerContext";
 import WindowRenderer from "@/src/windowing/WindowRenderer";
 import SessionContext from "./SessionContext";
+import { useSessionSocket } from "@/src/services/socket";
 
 export default function SessionClient({ sessionId }: { sessionId: string }) {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -32,6 +33,23 @@ export default function SessionClient({ sessionId }: { sessionId: string }) {
   const [mapUrl, setMapUrl] = useState("");
   const [isMapModalOpen, setIsMapModalOpen] = useState(false);
   const [mapUrlInput, setMapUrlInput] = useState("");
+
+  const upsertMessage = useCallback((message: Message) => {
+    setMessages((prev) => {
+      const exists = prev.some((item) => item.id === message.id);
+      if (exists) return prev;
+      return [...prev, message];
+    });
+  }, []);
+
+  const handleRealtimeMessage = useCallback(
+    (message: Message) => {
+      upsertMessage(message);
+    },
+    [upsertMessage]
+  );
+
+  useSessionSocket(sessionId, handleRealtimeMessage);
 
   useEffect(() => {
     async function loadSessionData() {
@@ -63,7 +81,7 @@ export default function SessionClient({ sessionId }: { sessionId: string }) {
     void (async () => {
       try {
         const created = await sendRollMessage(sessionId, result);
-        setMessages((prev) => [...prev, created]);
+        upsertMessage(created);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Falha ao enviar rolagem.");
       }
@@ -74,7 +92,7 @@ export default function SessionClient({ sessionId }: { sessionId: string }) {
     void (async () => {
       try {
         const created = await sendTextMessage(sessionId, message);
-        setMessages((prev) => [...prev, created]);
+        upsertMessage(created);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Falha ao enviar mensagem.");
       }
