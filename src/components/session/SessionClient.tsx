@@ -3,65 +3,138 @@
 import SessionHeader from "./SessionHeader";
 import MapArea from "./MapArea";
 import SidePanel from "./SidePanel";
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Character } from "@/src/models/character";
 import { Message } from "@/src/models/chat";
 import { DiceResult } from "@/src/utils/dice";
 import { templates } from "@/src/data/templates";
+import {
+  ApiError,
+  createCharacter,
+  getSession,
+  listCharacters,
+  listMessages,
+  removeCharacter,
+  sendRollMessage,
+  sendTextMessage,
+  updateCharacter,
+} from "@/src/services/api";
 
 import { WindowManagerProvider } from "@/src/windowing/WindowManagerContext";
 import WindowRenderer from "@/src/windowing/WindowRenderer";
 import SessionContext from "./SessionContext";
+import { useSessionSocket } from "@/src/services/socket";
 
 export default function SessionClient({ sessionId }: { sessionId: string }) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [characters, setCharacters] = useState<Character[]>([]);
+  const [sessionName, setSessionName] = useState<string>();
+  const [error, setError] = useState<string | null>(null);
   const [mapUrl, setMapUrl] = useState("");
   const [isMapModalOpen, setIsMapModalOpen] = useState(false);
   const [mapUrlInput, setMapUrlInput] = useState("");
 
-  function sendRollMessage(result: DiceResult) {
-    setMessages((prev) => [
-      ...prev,
-      {
-        id: crypto.randomUUID(),
-        author: "Você",
-        type: "roll",
-        rollData: result,
-        createdAt: new Date(),
-      },
-    ]);
-  }
-
-  function sendChatMessage(message: string) {
-    setMessages((prev) => [
-      ...prev,
-      {
-        id: crypto.randomUUID(),
-        author: "Você",
-        content: message,
-        type: "text",
-        createdAt: new Date(),
-      },
-    ]);
-  }
-
-  function handleCharacterSave(updated: Character) {
-    setCharacters((prev) => {
-      const exists = prev.find((c) => c.id === updated.id);
-      if (exists) {
-        return prev.map((c) =>
-          c.id === updated.id ? updated : c
-        );
-      }
-      return [...prev, updated];
+  const upsertMessage = useCallback((message: Message) => {
+    setMessages((prev) => {
+      const exists = prev.some((item) => item.id === message.id);
+      if (exists) return prev;
+      return [...prev, message];
     });
+  }, []);
+
+  const handleRealtimeMessage = useCallback(
+    (message: Message) => {
+      upsertMessage(message);
+    },
+    [upsertMessage]
+  );
+
+  useSessionSocket(sessionId, handleRealtimeMessage);
+
+  useEffect(() => {
+    async function loadSessionData() {
+      setError(null);
+
+      try {
+        const [session, loadedCharacters, loadedMessages] = await Promise.all([
+          getSession(sessionId),
+          listCharacters(sessionId),
+          listMessages(sessionId),
+        ]);
+
+        setSessionName(session.name);
+        setCharacters(loadedCharacters);
+        setMessages(loadedMessages);
+      } catch (err) {
+        if (err instanceof ApiError) {
+          setError(err.message);
+          return;
+        }
+        setError("Falha ao carregar dados da sessao.");
+      }
+    }
+
+    void loadSessionData();
+  }, [sessionId]);
+
+  function sendRoll(result: DiceResult) {
+    void (async () => {
+      try {
+        const created = await sendRollMessage(sessionId, result);
+        upsertMessage(created);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Falha ao enviar rolagem.");
+      }
+    })();
   }
 
-  function handleCharacterDelete(id: string) {
-    setCharacters((prev) =>
-      prev.filter((c) => c.id !== id)
-    );
+  function sendMessage(message: string) {
+    void (async () => {
+      try {
+        const created = await sendTextMessage(sessionId, message);
+        upsertMessage(created);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Falha ao enviar mensagem.");
+      }
+    })();
+  }
+
+  function saveCharacter(updated: Character) {
+    void (async () => {
+      try {
+        const exists = characters.some((character) => character.id === updated.id);
+        const response = exists
+          ? await updateCharacter(sessionId, updated.id, { data: updated.values })
+          : await createCharacter(sessionId, {
+              name: updated.name,
+              template: updated.templateId,
+              data: updated.values,
+            });
+
+        setCharacters((prev) => {
+          const found = prev.some((character) => character.id === response.id);
+          if (found) {
+            return prev.map((character) =>
+              character.id === response.id ? response : character
+            );
+          }
+          return [...prev, response];
+        });
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Falha ao salvar personagem.");
+      }
+    })();
+  }
+
+  function deleteCharacter(id: string) {
+    void (async () => {
+      try {
+        await removeCharacter(sessionId, id);
+        setCharacters((prev) => prev.filter((character) => character.id !== id));
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Falha ao remover personagem.");
+      }
+    })();
   }
 
   function handleOpenMapModal() {
@@ -79,24 +152,35 @@ export default function SessionClient({ sessionId }: { sessionId: string }) {
   }
 
   return (
-    <SessionContext.Provider value={{
-      characters,
-      templates,
-      messages,
-      setCharacters,
-      setMessages,
-      saveCharacter: handleCharacterSave,
-      deleteCharacter: handleCharacterDelete,
-      sendRoll: sendRollMessage,
-      sendMessage: sendChatMessage,
-    }}>
+    <SessionContext.Provider
+      value={{
+        characters,
+        templates,
+        messages,
+        setCharacters,
+        setMessages,
+        saveCharacter,
+        deleteCharacter,
+        sendRoll,
+        sendMessage,
+      }}
+    >
       <WindowManagerProvider>
         <div className="h-screen flex flex-col bg-[var(--bg-primary)] text-[var(--text-primary)]">
-          <SessionHeader sessionId={sessionId} onUploadClick={handleOpenMapModal} />
+          <SessionHeader
+            sessionId={sessionId}
+            sessionName={sessionName}
+            onUploadClick={handleOpenMapModal}
+          />
+
+          {error && (
+            <div className="px-8 py-2 text-sm text-red-400 border-b border-[var(--border-primary)]">
+              {error}
+            </div>
+          )}
 
           <div className="flex-1 grid grid-cols-[1fr_420px] xl:grid-cols-[1fr_460px] 2xl:grid-cols-[1fr_500px] overflow-hidden">
             <MapArea mapUrl={mapUrl} />
-
             <SidePanel />
           </div>
           <WindowRenderer />

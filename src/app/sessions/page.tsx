@@ -2,38 +2,28 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-
-type Session = {
-  id: string;
-  name: string;
-  gm: string;
-  createdAt: Date;
-};
+import {
+  ApiError,
+  clearAuthSession,
+  createSession,
+  getAuthUserName,
+  joinSession,
+  listSessions,
+  SessionSummary,
+} from "@/src/services/api";
 
 export default function SessionsPage() {
   const router = useRouter();
-  const [sessions, setSessions] = useState<Session[]>([
-    {
-      id: "1",
-      name: "Cronicas de Valdoria",
-      gm: "Voce",
-      createdAt: new Date(),
-    },
-    {
-      id: "2",
-      name: "Sombras de Eldrath",
-      gm: "Mestre Kael",
-      createdAt: new Date(),
-    },
-  ]);
-
+  const [sessions, setSessions] = useState<SessionSummary[]>([]);
   const [isVisible, setIsVisible] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const currentUser = "Voce";
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const currentUser = getAuthUserName() ?? "Voce";
 
-  const [selectedSession, setSelectedSession] = useState<Session | null>(null);
+  const [selectedSession, setSelectedSession] = useState<SessionSummary | null>(null);
   const [sessionPassword, setSessionPassword] = useState("");
-  const [sessionToDelete, setSessionToDelete] = useState<Session | null>(null);
+  const [sessionToDelete, setSessionToDelete] = useState<SessionSummary | null>(null);
   const [openSessionMenuId, setOpenSessionMenuId] = useState<string | null>(null);
 
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -57,20 +47,45 @@ export default function SessionsPage() {
       document.removeEventListener("mousedown", handleOutsideMenuClick);
   }, []);
 
-  function handleCreateSession() {
+  useEffect(() => {
+    async function loadSessions() {
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        const data = await listSessions();
+        setSessions(data);
+      } catch (err) {
+        if (err instanceof ApiError && err.status === 401) {
+          clearAuthSession();
+          router.push("/login");
+          return;
+        }
+        setError(err instanceof Error ? err.message : "Falha ao carregar sessoes.");
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    void loadSessions();
+  }, [router]);
+
+  async function handleCreateSession() {
     if (!newSessionName.trim()) return;
 
-    const newSession: Session = {
-      id: crypto.randomUUID(),
-      name: newSessionName.trim(),
-      gm: "Voce",
-      createdAt: new Date(),
-    };
+    try {
+      const session = await createSession({
+        name: newSessionName.trim(),
+        password: newSessionPassword.trim() || undefined,
+      });
 
-    setSessions((prev) => [...prev, newSession]);
-    setIsCreateModalOpen(false);
-    setNewSessionName("");
-    setNewSessionPassword("");
+      setSessions((prev) => [...prev, session]);
+      setIsCreateModalOpen(false);
+      setNewSessionName("");
+      setNewSessionPassword("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Falha ao criar sessão.");
+    }
   }
 
   function handleOpenCreateSessionModal() {
@@ -83,7 +98,7 @@ export default function SessionsPage() {
     setNewSessionPassword("");
   }
 
-  function handleOpenSession(session: Session) {
+  function handleOpenSession(session: SessionSummary) {
     setOpenSessionMenuId(null);
     setSelectedSession(session);
     setSessionPassword("");
@@ -94,17 +109,26 @@ export default function SessionsPage() {
     setSessionPassword("");
   }
 
-  function handleEnterSession() {
+  async function handleEnterSession() {
     if (!selectedSession) return;
-    router.push(`/sessions/${selectedSession.id}`);
+
+    try {
+      await joinSession({
+        sessionId: selectedSession.id,
+        password: sessionPassword.trim() || undefined,
+      });
+      router.push(`/sessions/${selectedSession.id}`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Falha ao entrar na sessao.");
+    }
   }
 
   function handleLogout() {
-    document.cookie = "auth_token=; Path=/; Max-Age=0; SameSite=Lax";
+    clearAuthSession();
     router.push("/login");
   }
 
-  function handleOpenDeleteSessionModal(session: Session) {
+  function handleOpenDeleteSessionModal(session: SessionSummary) {
     setSessionToDelete(session);
   }
 
@@ -172,23 +196,18 @@ export default function SessionsPage() {
       <div className="relative z-10 flex h-screen">
         <aside
           className={`
-    relative
-    transition-all duration-300 ease-in-out
-    ${isCollapsed ? "w-20" : "w-64"}
-    bg-[var(--bg-secondary)]
-    border-r border-[var(--border-primary)]
-    flex flex-col
-    px-4 py-8
-  `}
+            relative
+            transition-all duration-300 ease-in-out
+            ${isCollapsed ? "w-20" : "w-64"}
+            bg-[var(--bg-secondary)]
+            border-r border-[var(--border-primary)]
+            flex flex-col
+            px-4 py-8
+          `}
         >
           <button
             onClick={() => setIsCollapsed((prev) => !prev)}
-            className="
-      absolute top-4 right-4
-      text-[var(--text-muted)]
-      hover:text-[var(--text-primary)]
-      transition
-    "
+            className="absolute top-4 right-4 text-[var(--text-muted)] hover:text-[var(--text-primary)] transition"
           >
             <svg
               className={`w-4 h-4 transition-transform duration-300 ${
@@ -202,26 +221,14 @@ export default function SessionsPage() {
           </button>
 
           <div className="flex items-center gap-3 mb-10 mt-6">
-            <div
-              className="
-        w-10 h-10
-        rounded-full
-        bg-[var(--accent)]/20
-        border border-[var(--accent)]/40
-        flex items-center justify-center
-        text-sm font-medium
-        shadow-[0_0_15px_rgba(124,58,237,0.3)]
-      "
-            >
+            <div className="w-10 h-10 rounded-full bg-[var(--accent)]/20 border border-[var(--accent)]/40 flex items-center justify-center text-sm font-medium shadow-[0_0_15px_rgba(124,58,237,0.3)]">
               A
             </div>
 
             {!isCollapsed && (
               <div>
-                <div className="text-sm font-medium">Arquimago</div>
-                <div className="text-xs text-[var(--text-muted)]">
-                  Mestre do Veu
-                </div>
+                <div className="text-sm font-medium">{currentUser}</div>
+                <div className="text-xs text-[var(--text-muted)]">Aventureiro</div>
               </div>
             )}
           </div>
@@ -258,6 +265,9 @@ export default function SessionsPage() {
             </button>
           </div>
 
+          {error && <div className="mb-6 text-sm text-red-400">{error}</div>}
+          {isLoading && <div className="text-sm text-[var(--text-muted)]">Carregando...</div>}
+
           <div
             className={`
               grid
@@ -273,17 +283,7 @@ export default function SessionsPage() {
               <div
                 key={session.id}
                 onClick={() => handleOpenSession(session)}
-                className="
-                  relative
-                  bg-[var(--bg-card)]
-                  border border-[var(--border-subtle)]
-                  rounded-xl
-                  p-6
-                  transition
-                  cursor-pointer
-                  hover:border-[var(--accent)]/40
-                  hover:shadow-[0_0_30px_rgba(124,58,237,0.15)]
-                "
+                className="relative bg-[var(--bg-card)] border border-[var(--border-subtle)] rounded-xl p-6 transition cursor-pointer hover:border-[var(--accent)]/40 hover:shadow-[0_0_30px_rgba(124,58,237,0.15)]"
               >
                 {session.gm === currentUser && (
                   <div className="absolute top-3 right-3">
@@ -311,20 +311,10 @@ export default function SessionsPage() {
                       </button>
 
                       {openSessionMenuId === session.id && (
-                        <div
-                          className="absolute right-0 top-9 z-20 min-w-[150px] rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-1 shadow-[0_0_20px_rgba(0,0,0,0.5)]"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setOpenSessionMenuId(null);
-                              handleOpenDeleteSessionModal(session);
-                            }}
-                            className="w-full text-left px-3 py-2 rounded-md text-sm text-red-300 hover:bg-red-500/10 transition"
-                          >
-                            Excluir sessao
-                          </button>
+                        <div className="absolute right-0 top-9 z-20 min-w-[150px] rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-1 shadow-[0_0_20px_rgba(0,0,0,0.5)]">
+                          <span className="block px-3 py-2 text-xs text-[var(--text-muted)]">
+                            Sem ações disponíveis
+                          </span>
                         </div>
                       )}
                     </div>
@@ -333,9 +323,7 @@ export default function SessionsPage() {
 
                 <div className="text-lg font-medium mb-2 pr-10">{session.name}</div>
 
-                <div className="text-xs text-[var(--text-muted)]">
-                  Mestre: {session.gm}
-                </div>
+                <div className="text-xs text-[var(--text-muted)]">Mestre: {session.gm}</div>
               </div>
             ))}
           </div>
@@ -352,7 +340,7 @@ export default function SessionsPage() {
           <div className="relative w-full max-w-md rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-card)] p-6 shadow-[0_0_40px_rgba(0,0,0,0.7)]">
             <h2 className="text-lg font-semibold">Entrar na sessão</h2>
             <p className="mt-2 text-sm text-[var(--text-muted)]">
-              Digite a senha da sessão "{selectedSession.name}".
+              Digite a senha da sessão &quot;{selectedSession.name}&quot;.
             </p>
 
             <input
@@ -360,7 +348,7 @@ export default function SessionsPage() {
               value={sessionPassword}
               onChange={(e) => setSessionPassword(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === "Enter") handleEnterSession();
+                if (e.key === "Enter") void handleEnterSession();
               }}
               placeholder="Senha da sessão"
               className="mt-4 w-full rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-surface)] px-4 py-2.5 text-sm outline-none transition focus:border-[var(--accent)]"
@@ -375,7 +363,7 @@ export default function SessionsPage() {
               </button>
 
               <button
-                onClick={handleEnterSession}
+                onClick={() => void handleEnterSession()}
                 className="px-4 py-2 text-sm rounded-lg bg-[var(--accent)] hover:bg-[var(--accent-hover)] transition"
               >
                 Entrar
@@ -420,7 +408,7 @@ export default function SessionsPage() {
                   type="password"
                   value={newSessionPassword}
                   onChange={(e) => setNewSessionPassword(e.target.value)}
-                  placeholder="Defina uma senha"
+                  placeholder="Defina uma senha (opcional)"
                   className="w-full rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-surface)] px-4 py-2.5 text-sm outline-none transition focus:border-[var(--accent)]"
                 />
               </div>
@@ -435,7 +423,7 @@ export default function SessionsPage() {
               </button>
 
               <button
-                onClick={handleCreateSession}
+                onClick={() => void handleCreateSession()}
                 className="px-4 py-2 text-sm rounded-lg bg-[var(--accent)] hover:bg-[var(--accent-hover)] transition disabled:opacity-60 disabled:cursor-not-allowed"
                 disabled={!newSessionName.trim()}
               >

@@ -12,11 +12,19 @@ type Props = {
   templates: CharacterTemplate[];
   selectedTemplateId: string;
   setSelectedTemplateId: (id: string) => void;
-  values: Record<string, any>;
-  setValues: React.Dispatch<React.SetStateAction<Record<string, any>>>;
+  values: Record<string, unknown>;
+  setValues: React.Dispatch<React.SetStateAction<Record<string, unknown>>>;
   onRoll: (result: DiceResult) => void;
   onSendMessage: (content: string) => void;
 };
+
+function asText(value: unknown) {
+  return typeof value === "string" ? value : "";
+}
+
+function asNumber(value: unknown) {
+  return typeof value === "number" ? value : 0;
+}
 
 export default function CharacterForm({
   isEditMode,
@@ -32,17 +40,12 @@ export default function CharacterForm({
   onRoll,
   onSendMessage,
 }: Props) {
-  const selectedTemplate = templates.find(
-    (t) => t.id === selectedTemplateId
-  );
+  const selectedTemplate = templates.find((template) => template.id === selectedTemplateId);
 
   return (
     <div className="p-6 space-y-6">
-      {/* Nome */}
       <div className="space-y-1">
-        <label className="text-xs font-medium opacity-70">
-          Nome do Personagem
-        </label>
+        <label className="text-xs font-medium opacity-70">Nome do Personagem</label>
 
         <input
           type="text"
@@ -63,14 +66,9 @@ export default function CharacterForm({
           `}
         />
 
-        {nameError && (
-          <span className="text-xs text-red-400">
-            O nome é obrigatório.
-          </span>
-        )}
+        {nameError && <span className="text-xs text-red-400">O nome é obrigatório.</span>}
       </div>
 
-      {/* Template select (somente criação) */}
       {!isEditMode && (
         <select
           value={selectedTemplateId}
@@ -85,7 +83,6 @@ export default function CharacterForm({
         </select>
       )}
 
-      {/* Seções */}
       {selectedTemplate?.sections.map((section) => (
         <div key={section.id} className="space-y-4">
           <div className="text-sm font-medium opacity-70 border-b border-[var(--border-subtle)] pb-1">
@@ -95,6 +92,7 @@ export default function CharacterForm({
           <div className="grid grid-cols-12 gap-4">
             {section.fields.map((field) => {
               const safeSpan = Math.min(field.columnSpan || 12, 12);
+              const value = values[field.id];
 
               return (
                 <div
@@ -104,28 +102,20 @@ export default function CharacterForm({
                   }}
                   className="space-y-1"
                 >
-                  {/* Label clicável */}
                   <label
                     onClick={() => {
-                      const value = values[field.id];
                       if (value === undefined || value === "") return;
-                      onSendMessage(`${field.label}: ${value}`);
+                      onSendMessage(`${field.label}: ${String(value)}`);
                     }}
-                    className="
-                      block text-xs font-medium opacity-70
-                      cursor-pointer
-                      hover:text-[var(--accent)]
-                      transition
-                    "
+                    className="block text-xs font-medium opacity-70 cursor-pointer hover:text-[var(--accent)] transition"
                   >
                     {field.label}
                   </label>
 
-                  {/* TEXT */}
                   {field.type === "text" && (
                     <input
                       type="text"
-                      value={values[field.id] || ""}
+                      value={asText(value)}
                       onChange={(e) =>
                         setValues((prev) => ({
                           ...prev,
@@ -136,12 +126,11 @@ export default function CharacterForm({
                     />
                   )}
 
-                  {/* NUMBER */}
                   {field.type === "number" && (
                     <div className="flex items-center gap-2">
                       <input
                         type="number"
-                        value={values[field.id] || 0}
+                        value={asNumber(value)}
                         onChange={(e) =>
                           setValues((prev) => ({
                             ...prev,
@@ -155,11 +144,7 @@ export default function CharacterForm({
                         <button
                           type="button"
                           onClick={() => {
-                            const baseValue = values[field.id] || 0;
-                            const result = rollExpression(
-                              field.dice || "d20",
-                              baseValue
-                            );
+                            const result = rollExpression(field.dice ?? "d20", asNumber(value));
                             if (!result) return;
                             onRoll(result);
                           }}
@@ -171,10 +156,9 @@ export default function CharacterForm({
                     </div>
                   )}
 
-                  {/* TEXTAREA */}
                   {field.type === "textarea" && (
                     <textarea
-                      value={values[field.id] || ""}
+                      value={asText(value)}
                       onChange={(e) =>
                         setValues((prev) => ({
                           ...prev,
