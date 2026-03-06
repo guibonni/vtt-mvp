@@ -6,13 +6,14 @@ import React from "react";
 import { useEscapeKey } from "@/src/hooks/useEscapeKey";
 import { rollExpression } from "@/src/utils/dice";
 import { useSession } from "./SessionContext";
+import { getAuthUserId } from "@/src/services/api";
 
 export default function ChatTab() {
   const [showDiceMenu, setShowDiceMenu] = useState(false);
   const [message, setMessage] = useState("");
   const [, setRefreshTick] = useState(0);
 
-  const currentUser = "Voce";
+  const currentUserId = getAuthUserId();
   const { messages, sendRoll, sendMessage } = useSession();
 
   const scrollRef = useRef<HTMLDivElement | null>(null);
@@ -135,7 +136,7 @@ export default function ChatTab() {
       top: el.scrollHeight,
       behavior: "smooth",
     });
-  }, [messages]);
+  }, [messages, currentUserId]);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -174,13 +175,13 @@ export default function ChatTab() {
     }
 
     previousMessageCountRef.current = currentCount;
-  }, [messages]);
+  }, [messages, currentUserId]);
 
   return (
     <div className="flex flex-col flex-1 min-h-0">
       <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto p-8 space-y-6">
         {messages.map((msg, index) => {
-          const isOwn = msg.author === currentUser;
+          const isOwn = !!currentUserId && msg.authorId === currentUserId;
           const isMaster = msg.author === "Mestre";
           const previous = messages[index - 1];
           const isGrouped = previous && previous.author === msg.author;

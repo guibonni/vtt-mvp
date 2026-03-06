@@ -29,7 +29,7 @@ export default function LoginPage() {
         password,
       });
 
-      setAuthSession(response.token, response.user.name);
+      setAuthSession(response.token, response.user.name, response.user.id);
       router.push("/sessions");
     } catch (err) {
       if (err instanceof ApiError) {

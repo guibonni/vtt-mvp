@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { io, Socket } from "socket.io-client";
 import { API_BASE_URL } from "@/src/config/api";
 import { Message } from "@/src/models/chat";
-import { getAuthToken, getAuthUserName } from "@/src/services/api";
+import { getAuthToken, getAuthUserId, getAuthUserName } from "@/src/services/api";
 
 type BackendSocketMessage = {
   id: string;
@@ -11,9 +11,11 @@ type BackendSocketMessage = {
   diceData?: Record<string, unknown> | null;
   createdAt: string;
   user?: {
-    id: string;
+    id: string | number;
     name: string;
   };
+  userId?: string | number;
+  userName?: string;
 };
 
 let socket: Socket | null = null;
@@ -43,13 +45,29 @@ function isBackendSocketMessage(value: unknown): value is BackendSocketMessage {
   );
 }
 
+function toNullableString(value: unknown): string | null {
+  if (typeof value === "string" && value.trim()) return value;
+  if (typeof value === "number") return String(value);
+  if (typeof value === "bigint") return String(value);
+  if (value && typeof value === "object") {
+    const asString = String(value);
+    if (asString && asString !== "[object Object]") return asString;
+  }
+  return null;
+}
+
 function toRealtimeMessage(payload: BackendSocketMessage): Message | null {
-  const author = payload.user?.name ?? getAuthUserName() ?? "Voce";
+  const fallbackAuthor = getAuthUserName() ?? "Voce";
+  const fallbackAuthorId = getAuthUserId();
+  const author = payload.user?.name ?? payload.userName ?? fallbackAuthor;
+  const mappedAuthorId = toNullableString(payload.user?.id ?? payload.userId);
+  const authorId = mappedAuthorId ?? (author === fallbackAuthor ? fallbackAuthorId : null);
   const rollData = payload.diceData as Message["rollData"] | null | undefined;
   const isRoll = payload.type === "DICE" && !!rollData;
 
   return {
     id: payload.id,
+    authorId,
     author,
     type: isRoll ? "roll" : "text",
     content: isRoll ? undefined : payload.content,
