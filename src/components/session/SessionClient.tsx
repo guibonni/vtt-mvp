@@ -36,9 +36,22 @@ export default function SessionClient({ sessionId }: { sessionId: string }) {
 
   const upsertMessage = useCallback((message: Message) => {
     setMessages((prev) => {
-      const exists = prev.some((item) => item.id === message.id);
-      if (exists) return prev;
-      return [...prev, message];
+      const index = prev.findIndex((item) => item.id === message.id);
+      if (index === -1) return [...prev, message];
+
+      const existing = prev[index];
+      const merged: Message = {
+        ...existing,
+        ...message,
+        authorId: message.authorId ?? existing.authorId,
+        author: message.author || existing.author,
+        content: message.content ?? existing.content,
+        rollData: message.rollData ?? existing.rollData,
+      };
+
+      const next = [...prev];
+      next[index] = merged;
+      return next;
     });
   }, []);
 

@@ -5,6 +5,7 @@ import { DiceResult } from "@/src/utils/dice";
 
 const AUTH_COOKIE_NAME = "auth_token";
 const USER_NAME_COOKIE_NAME = "auth_user_name";
+const USER_ID_COOKIE_NAME = "auth_user_id";
 const COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24;
 
 type HttpMethod = "GET" | "POST" | "PUT" | "DELETE";
@@ -64,9 +65,11 @@ type BackendMessage = {
   diceData?: Record<string, unknown> | null;
   createdAt: string;
   user?: {
-    id: string;
+    id: string | number;
     name: string;
   };
+  userId?: string | number;
+  userName?: string;
 };
 
 export type SessionSummary = {
@@ -115,10 +118,37 @@ export function getAuthUserName() {
   return getCookie(USER_NAME_COOKIE_NAME);
 }
 
-export function setAuthSession(token: string, userName?: string) {
+export function getAuthUserId() {
+  const userIdFromCookie = getCookie(USER_ID_COOKIE_NAME);
+  if (userIdFromCookie) return userIdFromCookie;
+
+  const token = getAuthToken();
+  if (!token || typeof window === "undefined") return null;
+
+  try {
+    const [, payloadBase64] = token.split(".");
+    if (!payloadBase64) return null;
+
+    const normalized = payloadBase64.replace(/-/g, "+").replace(/_/g, "/");
+    const padded = normalized.padEnd(
+      normalized.length + ((4 - (normalized.length % 4)) % 4),
+      "="
+    );
+    const payload = JSON.parse(window.atob(padded)) as Record<string, unknown>;
+
+    return toNullableString(payload.sub ?? payload.userId ?? payload.id);
+  } catch {
+    return null;
+  }
+}
+
+export function setAuthSession(token: string, userName?: string, userId?: string) {
   setCookie(AUTH_COOKIE_NAME, token);
   if (userName) {
     setCookie(USER_NAME_COOKIE_NAME, userName);
+  }
+  if (userId) {
+    setCookie(USER_ID_COOKIE_NAME, userId);
   }
 }
 
@@ -126,6 +156,7 @@ export function clearAuthSession() {
   if (typeof document === "undefined") return;
   document.cookie = `${AUTH_COOKIE_NAME}=; Path=/; Max-Age=0; SameSite=Lax`;
   document.cookie = `${USER_NAME_COOKIE_NAME}=; Path=/; Max-Age=0; SameSite=Lax`;
+  document.cookie = `${USER_ID_COOKIE_NAME}=; Path=/; Max-Age=0; SameSite=Lax`;
 }
 
 async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
@@ -212,13 +243,32 @@ function toDiceResult(data: Record<string, unknown> | null | undefined): DiceRes
   };
 }
 
-function mapMessage(message: BackendMessage, fallbackAuthor: string): Message {
-  const author = message.user?.name ?? fallbackAuthor;
+function toNullableString(value: unknown): string | null {
+  if (typeof value === "string" && value.trim()) return value;
+  if (typeof value === "number") return String(value);
+  if (typeof value === "bigint") return String(value);
+  if (value && typeof value === "object") {
+    const asString = String(value);
+    if (asString && asString !== "[object Object]") return asString;
+  }
+  return null;
+}
+
+function mapMessage(
+  message: BackendMessage,
+  fallbackAuthor: string,
+  fallbackAuthorId: string | null
+): Message {
+  const mappedAuthorId = toNullableString(message.user?.id ?? message.userId);
+  const author = message.user?.name ?? message.userName ?? fallbackAuthor;
+  const authorId =
+    mappedAuthorId ?? (author === fallbackAuthor ? fallbackAuthorId : null);
   const rollData = toDiceResult(message.diceData);
   const isRoll = message.type === "DICE" && !!rollData;
 
   return {
     id: message.id,
+    authorId,
     author,
     type: isRoll ? "roll" : "text",
     content: isRoll ? undefined : message.content,
@@ -315,12 +365,14 @@ export async function removeCharacter(sessionId: string, characterId: string) {
 
 export async function listMessages(sessionId: string) {
   const currentUser = getAuthUserName() ?? "Voce";
+  const currentUserId = getAuthUserId();
   const messages = await apiRequest<BackendMessage[]>(`/sessions/${sessionId}/messages`);
-  return messages.map((message) => mapMessage(message, currentUser));
+  return messages.map((message) => mapMessage(message, currentUser, currentUserId));
 }
 
 export async function sendTextMessage(sessionId: string, content: string) {
   const currentUser = getAuthUserName() ?? "Voce";
+  const currentUserId = getAuthUserId();
   const message = await apiRequest<BackendMessage>(`/sessions/${sessionId}/messages`, {
     method: "POST",
     body: {
@@ -329,11 +381,12 @@ export async function sendTextMessage(sessionId: string, content: string) {
     },
   });
 
-  return mapMessage(message, currentUser);
+  return mapMessage(message, currentUser, currentUserId);
 }
 
 export async function sendRollMessage(sessionId: string, result: DiceResult) {
   const currentUser = getAuthUserName() ?? "Voce";
+  const currentUserId = getAuthUserId();
   const message = await apiRequest<BackendMessage>(`/sessions/${sessionId}/messages`, {
     method: "POST",
     body: {
@@ -343,5 +396,5 @@ export async function sendRollMessage(sessionId: string, result: DiceResult) {
     },
   });
 
-  return mapMessage(message, currentUser);
+  return mapMessage(message, currentUser, currentUserId);
 }

@@ -9,6 +9,7 @@ export type RollData = {
 
 export type Message = {
   id: string;
+  authorId: string | null;
   author: string;
   type: "text" | "roll";
   content?: string;

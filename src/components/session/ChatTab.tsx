@@ -6,17 +6,58 @@ import React from "react";
 import { useEscapeKey } from "@/src/hooks/useEscapeKey";
 import { rollExpression } from "@/src/utils/dice";
 import { useSession } from "./SessionContext";
+import { getAuthUserId } from "@/src/services/api";
 
 export default function ChatTab() {
   const [showDiceMenu, setShowDiceMenu] = useState(false);
   const [message, setMessage] = useState("");
   const [, setRefreshTick] = useState(0);
 
-  const currentUser = "Voce";
+  const currentUserId = getAuthUserId();
   const { messages, sendRoll, sendMessage } = useSession();
 
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const diceRef = useRef<HTMLDivElement | null>(null);
+  const previousMessageCountRef = useRef(0);
+
+  function playNotificationSound() {
+    if (typeof window === "undefined") return;
+    const AudioContextConstructor = window.AudioContext;
+    if (!AudioContextConstructor) return;
+
+    const context = new AudioContextConstructor();
+    const now = context.currentTime;
+    const beepDuration = 0.13;
+    const gap = 0.001;
+
+    const scheduleBeep = (startAt: number, frequency: number) => {
+      const oscillator = context.createOscillator();
+      const gain = context.createGain();
+
+      oscillator.type = "sine";
+      oscillator.frequency.setValueAtTime(frequency, startAt);
+      oscillator.frequency.exponentialRampToValueAtTime(
+        frequency * 1.18,
+        startAt + beepDuration
+      );
+
+      gain.gain.setValueAtTime(0.0001, startAt);
+      gain.gain.exponentialRampToValueAtTime(0.16, startAt + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.0001, startAt + beepDuration);
+
+      oscillator.connect(gain);
+      gain.connect(context.destination);
+      oscillator.start(startAt);
+      oscillator.stop(startAt + beepDuration);
+    };
+
+    scheduleBeep(now, 820);
+    scheduleBeep(now + beepDuration + gap, 980);
+
+    window.setTimeout(() => {
+      void context.close();
+    }, Math.ceil((beepDuration * 2 + gap + 0.05) * 1000));
+  }
 
   function sendRollFromExpression(expression: string) {
     const match = expression.match(/^(\d+d\d+)([+-]\d+)?$/);
@@ -95,7 +136,7 @@ export default function ChatTab() {
       top: el.scrollHeight,
       behavior: "smooth",
     });
-  }, [messages]);
+  }, [messages, currentUserId]);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -120,11 +161,27 @@ export default function ChatTab() {
     return () => clearInterval(interval);
   }, []);
 
+  useEffect(() => {
+    const previousCount = previousMessageCountRef.current;
+    const currentCount = messages.length;
+
+    if (previousCount === 0) {
+      previousMessageCountRef.current = currentCount;
+      return;
+    }
+
+    if (currentCount > previousCount) {
+      playNotificationSound();
+    }
+
+    previousMessageCountRef.current = currentCount;
+  }, [messages, currentUserId]);
+
   return (
     <div className="flex flex-col flex-1 min-h-0">
       <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto p-8 space-y-6">
         {messages.map((msg, index) => {
-          const isOwn = msg.author === currentUser;
+          const isOwn = !!currentUserId && msg.authorId === currentUserId;
           const isMaster = msg.author === "Mestre";
           const previous = messages[index - 1];
           const isGrouped = previous && previous.author === msg.author;
