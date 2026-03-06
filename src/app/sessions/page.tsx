@@ -226,7 +226,7 @@ export default function SessionsPage() {
 
           <div className="flex items-center gap-3 mb-10 mt-6">
             <div className="w-10 h-10 rounded-full bg-[var(--accent)]/20 border border-[var(--accent)]/40 flex items-center justify-center text-sm font-medium shadow-[0_0_15px_rgba(124,58,237,0.3)]">
-              A
+              {currentUser.charAt(0).toUpperCase()}
             </div>
 
             {!isCollapsed && (
@@ -239,8 +239,6 @@ export default function SessionsPage() {
 
           <nav className="flex flex-col gap-4 text-sm mt-4">
             <SidebarItem icon="S" label="Sessões" collapsed={isCollapsed} active />
-            <SidebarItem icon="P" label="Perfil" collapsed={isCollapsed} />
-            <SidebarItem icon="C" label="Configurações" collapsed={isCollapsed} />
           </nav>
 
           <div className="mt-auto">
