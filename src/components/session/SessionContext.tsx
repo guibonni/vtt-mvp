@@ -10,6 +10,7 @@ type SessionContextType = {
     characters: Character[];
     templates: CharacterTemplate[];
     messages: Message[];
+    sessionCreatedById: string | null;
     setCharacters: React.Dispatch<React.SetStateAction<Character[]>>;
     setMessages: React.Dispatch<React.SetStateAction<Message[]>>;
     saveCharacter: (character: Character) => void;

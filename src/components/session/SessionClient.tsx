@@ -29,6 +29,7 @@ export default function SessionClient({ sessionId }: { sessionId: string }) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [characters, setCharacters] = useState<Character[]>([]);
   const [sessionName, setSessionName] = useState<string>();
+  const [sessionCreatedById, setSessionCreatedById] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [mapUrl, setMapUrl] = useState("");
   const [isMapModalOpen, setIsMapModalOpen] = useState(false);
@@ -76,6 +77,7 @@ export default function SessionClient({ sessionId }: { sessionId: string }) {
         ]);
 
         setSessionName(session.name);
+        setSessionCreatedById(session.createdById);
         setCharacters(loadedCharacters);
         setMessages(loadedMessages);
       } catch (err) {
@@ -170,6 +172,7 @@ export default function SessionClient({ sessionId }: { sessionId: string }) {
         characters,
         templates,
         messages,
+        sessionCreatedById,
         setCharacters,
         setMessages,
         saveCharacter,

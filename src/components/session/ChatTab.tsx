@@ -14,7 +14,7 @@ export default function ChatTab() {
   const [, setRefreshTick] = useState(0);
 
   const currentUserId = getAuthUserId();
-  const { messages, sendRoll, sendMessage } = useSession();
+  const { messages, sendRoll, sendMessage, sessionCreatedById } = useSession();
 
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const diceRef = useRef<HTMLDivElement | null>(null);
@@ -182,7 +182,11 @@ export default function ChatTab() {
       <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto p-8 space-y-6">
         {messages.map((msg, index) => {
           const isOwn = !!currentUserId && msg.authorId === currentUserId;
-          const isMaster = msg.author === "Mestre";
+          const isMaster =
+            !!currentUserId &&
+            !!sessionCreatedById &&
+            msg.authorId === sessionCreatedById &&
+            sessionCreatedById !== currentUserId;
           const previous = messages[index - 1];
           const isGrouped = previous && previous.author === msg.author;
           const isNewDay =
@@ -228,7 +232,12 @@ export default function ChatTab() {
                 >
                   {!isGrouped && (
                     <div className="mb-1 flex items-center gap-2">
-                      <span className="text-xs font-medium opacity-80">{msg.author}</span>
+                      <span className="text-xs font-medium opacity-80">{isOwn ? "Você" : msg.author}</span>
+                      {isMaster && (
+                        <span className="rounded-full border border-[var(--accent)]/30 bg-[var(--accent)]/10 px-1.5 py-0.5 text-[9px] font-semibold tracking-[0.08em] text-[var(--accent)]/80">
+                          GM
+                        </span>
+                      )}
 
                       <span className="text-[10px] font-medium opacity-60">
                         • {formatTimestamp(msg.createdAt)}
