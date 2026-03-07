@@ -19,6 +19,7 @@ export default function SessionsPage() {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [joinError, setJoinError] = useState<string | null>(null);
   const currentUser = getAuthUserName() ?? "Voce";
 
   const [selectedSession, setSelectedSession] = useState<SessionSummary | null>(null);
@@ -102,11 +103,13 @@ export default function SessionsPage() {
     setOpenSessionMenuId(null);
     setSelectedSession(session);
     setSessionPassword("");
+    setJoinError(null);
   }
 
   function handleCloseSessionPrompt() {
     setSelectedSession(null);
     setSessionPassword("");
+    setJoinError(null);
   }
 
   async function handleEnterSession() {
@@ -117,9 +120,10 @@ export default function SessionsPage() {
         sessionId: selectedSession.id,
         password: sessionPassword.trim() || undefined,
       });
+      setJoinError(null);
       router.push(`/sessions/${selectedSession.id}`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Falha ao entrar na sessao.");
+      setJoinError(err instanceof Error ? err.message : "Falha ao entrar na sessao.");
     }
   }
 
@@ -222,7 +226,7 @@ export default function SessionsPage() {
 
           <div className="flex items-center gap-3 mb-10 mt-6">
             <div className="w-10 h-10 rounded-full bg-[var(--accent)]/20 border border-[var(--accent)]/40 flex items-center justify-center text-sm font-medium shadow-[0_0_15px_rgba(124,58,237,0.3)]">
-              A
+              {currentUser.charAt(0).toUpperCase()}
             </div>
 
             {!isCollapsed && (
@@ -235,8 +239,6 @@ export default function SessionsPage() {
 
           <nav className="flex flex-col gap-4 text-sm mt-4">
             <SidebarItem icon="S" label="Sessões" collapsed={isCollapsed} active />
-            <SidebarItem icon="P" label="Perfil" collapsed={isCollapsed} />
-            <SidebarItem icon="C" label="Configurações" collapsed={isCollapsed} />
           </nav>
 
           <div className="mt-auto">
@@ -346,13 +348,20 @@ export default function SessionsPage() {
             <input
               type="password"
               value={sessionPassword}
-              onChange={(e) => setSessionPassword(e.target.value)}
+              onChange={(e) => {
+                setSessionPassword(e.target.value);
+                if (joinError) setJoinError(null);
+              }}
               onKeyDown={(e) => {
                 if (e.key === "Enter") void handleEnterSession();
               }}
               placeholder="Senha da sessão"
               className="mt-4 w-full rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-surface)] px-4 py-2.5 text-sm outline-none transition focus:border-[var(--accent)]"
             />
+
+            {joinError && (
+              <p className="mt-2 text-sm text-red-400">{joinError}</p>
+            )}
 
             <div className="mt-6 flex justify-end gap-3">
               <button
