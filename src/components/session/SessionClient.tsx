@@ -6,12 +6,13 @@ import SidePanel from "./SidePanel";
 import { useCallback, useEffect, useState } from "react";
 import { Character } from "@/src/models/character";
 import { Message } from "@/src/models/chat";
+import { CharacterTemplate } from "@/src/models/template";
 import { DiceResult } from "@/src/utils/dice";
-import { templates } from "@/src/data/templates";
 import {
   ApiError,
   createCharacter,
   getSession,
+  listCharacterTemplates,
   listCharacters,
   listMessages,
   removeCharacter,
@@ -28,6 +29,7 @@ import { useSessionSocket } from "@/src/services/socket";
 export default function SessionClient({ sessionId }: { sessionId: string }) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [characters, setCharacters] = useState<Character[]>([]);
+  const [templates, setTemplates] = useState<CharacterTemplate[]>([]);
   const [sessionName, setSessionName] = useState<string>();
   const [sessionCreatedById, setSessionCreatedById] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -70,21 +72,25 @@ export default function SessionClient({ sessionId }: { sessionId: string }) {
       setError(null);
 
       try {
-        const [session, loadedCharacters, loadedMessages] = await Promise.all([
+        const [session, loadedCharacters, loadedMessages, loadedTemplates] = await Promise.all([
           getSession(sessionId),
           listCharacters(sessionId),
           listMessages(sessionId),
+          listCharacterTemplates(),
         ]);
 
         setSessionName(session.name);
         setSessionCreatedById(session.createdById);
         setCharacters(loadedCharacters);
         setMessages(loadedMessages);
+        setTemplates(loadedTemplates);
       } catch (err) {
         if (err instanceof ApiError) {
+          setTemplates([]);
           setError(err.message);
           return;
         }
+        setTemplates([]);
         setError("Falha ao carregar dados da sessao.");
       }
     }
@@ -122,18 +128,24 @@ export default function SessionClient({ sessionId }: { sessionId: string }) {
           ? await updateCharacter(sessionId, updated.id, { data: updated.values })
           : await createCharacter(sessionId, {
               name: updated.name,
-              template: updated.templateId,
+              templateId: updated.templateId,
               data: updated.values,
             });
 
         setCharacters((prev) => {
+          const existingCharacter = prev.find((character) => character.id === response.id);
+          const mergedResponse = {
+            ...existingCharacter,
+            ...response,
+            template: response.template ?? existingCharacter?.template ?? updated.template,
+          };
           const found = prev.some((character) => character.id === response.id);
           if (found) {
             return prev.map((character) =>
-              character.id === response.id ? response : character
+              character.id === response.id ? mergedResponse : character
             );
           }
-          return [...prev, response];
+          return [...prev, mergedResponse];
         });
       } catch (err) {
         setError(err instanceof Error ? err.message : "Falha ao salvar personagem.");

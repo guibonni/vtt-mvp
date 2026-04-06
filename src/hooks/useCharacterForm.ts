@@ -21,12 +21,14 @@ export function useCharacterForm({
 
   const [name, setName] = useState("");
   const [nameError, setNameError] = useState(false);
+  const [templateError, setTemplateError] = useState(false);
   const [selectedTemplateId, setSelectedTemplateId] = useState("");
   const [values, setValues] = useState<Record<string, unknown>>({});
 
   function reset() {
     setName("");
     setNameError(false);
+    setTemplateError(false);
     setSelectedTemplateId("");
     setValues({});
   }
@@ -57,11 +59,14 @@ export function useCharacterForm({
   function submit() {
     if (!name.trim()) {
       setNameError(true);
-      return;
     }
 
     const selectedTemplate = templates.find((template) => template.id === selectedTemplateId);
-    if (!selectedTemplate) return;
+    if (!selectedTemplate) {
+      setTemplateError(true);
+    }
+
+    if (!name.trim() || !selectedTemplate) return;
 
     const updatedCharacter: Character = {
       id: character?.id || crypto.randomUUID(),
@@ -82,6 +87,8 @@ export function useCharacterForm({
     setName,
     nameError,
     clearNameError: () => setNameError(false),
+    templateError,
+    clearTemplateError: () => setTemplateError(false),
     selectedTemplateId,
     setSelectedTemplateId,
     values,

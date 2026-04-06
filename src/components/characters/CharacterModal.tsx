@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Character } from "@/src/models/character";
 import { CharacterTemplate } from "@/src/models/template";
 import { DiceResult } from "@/src/utils/dice";
@@ -40,6 +40,14 @@ export default function CharacterModal({
   isActive,
 }: Props) {
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const resolvedTemplates = useMemo(() => {
+    if (!character?.template) return templates;
+
+    return [
+      character.template,
+      ...templates.filter((template) => template.id !== character.template?.id),
+    ];
+  }, [character, templates]);
 
   useEscapeKey(isOpen, onClose);
 
@@ -49,6 +57,8 @@ export default function CharacterModal({
     setName,
     nameError,
     clearNameError,
+    templateError,
+    clearTemplateError,
     selectedTemplateId,
     setSelectedTemplateId,
     values,
@@ -57,7 +67,7 @@ export default function CharacterModal({
   } = useCharacterForm({
     isOpen,
     character,
-    templates,
+    templates: resolvedTemplates,
     onSave,
     onClose,
   });
@@ -82,11 +92,14 @@ export default function CharacterModal({
       >
         <CharacterForm
           isEditMode={isEditMode}
+          activeTemplate={character?.template}
           name={name}
           setName={setName}
           nameError={nameError}
           clearNameError={clearNameError}
-          templates={templates}
+          templateError={templateError}
+          clearTemplateError={clearTemplateError}
+          templates={resolvedTemplates}
           selectedTemplateId={selectedTemplateId}
           setSelectedTemplateId={setSelectedTemplateId}
           values={values}

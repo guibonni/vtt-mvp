@@ -1,14 +1,18 @@
 "use client";
 
+import { useEffect, useMemo, useRef, useState } from "react";
 import { CharacterTemplate } from "@/src/models/template";
 import { DiceResult, rollExpression } from "@/src/utils/dice";
 
 type Props = {
   isEditMode: boolean;
+  activeTemplate?: CharacterTemplate;
   name: string;
   setName: (value: string) => void;
   nameError: boolean;
   clearNameError: () => void;
+  templateError: boolean;
+  clearTemplateError: () => void;
   templates: CharacterTemplate[];
   selectedTemplateId: string;
   setSelectedTemplateId: (id: string) => void;
@@ -28,10 +32,13 @@ function asNumber(value: unknown) {
 
 export default function CharacterForm({
   isEditMode,
+  activeTemplate,
   name,
   setName,
   nameError,
   clearNameError,
+  templateError,
+  clearTemplateError,
   templates,
   selectedTemplateId,
   setSelectedTemplateId,
@@ -40,7 +47,58 @@ export default function CharacterForm({
   onRoll,
   onSendMessage,
 }: Props) {
-  const selectedTemplate = templates.find((template) => template.id === selectedTemplateId);
+  const selectedTemplate =
+    (isEditMode ? activeTemplate : undefined) ??
+    templates.find((template) => template.id === selectedTemplateId);
+  const [templateSearch, setTemplateSearch] = useState("");
+  const [isTemplateSelectOpen, setIsTemplateSelectOpen] = useState(false);
+  const templateSelectRef = useRef<HTMLDivElement | null>(null);
+
+  const filteredTemplates = useMemo(() => {
+    const normalizedSearch = templateSearch.trim().toLowerCase();
+    if (!normalizedSearch) return templates;
+
+    return templates.filter((template) =>
+      template.name.toLowerCase().includes(normalizedSearch)
+    );
+  }, [templateSearch, templates]);
+
+  useEffect(() => {
+    if (!isTemplateSelectOpen) return;
+
+    function handleOutsideClick(event: MouseEvent) {
+      const target = event.target as Node | null;
+      if (templateSelectRef.current?.contains(target)) return;
+      setIsTemplateSelectOpen(false);
+    }
+
+    document.addEventListener("mousedown", handleOutsideClick);
+    return () => document.removeEventListener("mousedown", handleOutsideClick);
+  }, [isTemplateSelectOpen]);
+
+  function handleTemplateSearchChange(value: string) {
+    setTemplateSearch(value);
+    setSelectedTemplateId("");
+    setIsTemplateSelectOpen(true);
+    if (templateError) clearTemplateError();
+  }
+
+  function handleTemplateSelect(template: CharacterTemplate) {
+    setSelectedTemplateId(template.id);
+    setTemplateSearch(template.name);
+    setIsTemplateSelectOpen(false);
+    clearTemplateError();
+  }
+
+  function handleToggleTemplateSelect() {
+    setIsTemplateSelectOpen((current) => {
+      const next = !current;
+      if (next) {
+        setTemplateSearch("");
+      }
+      return next;
+    });
+  }
 
   return (
     <div className="p-6 space-y-6">
@@ -70,17 +128,85 @@ export default function CharacterForm({
       </div>
 
       {!isEditMode && (
-        <select
-          value={selectedTemplateId}
-          onChange={(e) => setSelectedTemplateId(e.target.value)}
-          className="w-full px-3 py-2 bg-[var(--bg-surface)] border border-[var(--border-subtle)] rounded-md text-sm"
-        >
-          {templates.map((template) => (
-            <option key={template.id} value={template.id}>
-              {template.name}
-            </option>
-          ))}
-        </select>
+        <div className="space-y-3" ref={templateSelectRef}>
+          <div className="space-y-1">
+            <label className="text-xs font-medium opacity-70">Template</label>
+
+            <button
+              type="button"
+              onClick={handleToggleTemplateSelect}
+              className={`
+                flex w-full items-center justify-between gap-3 px-3 py-2
+                bg-[var(--bg-surface)]
+                border rounded-md text-sm outline-none transition text-left
+                ${
+                  templateError
+                    ? "border-red-500"
+                    : "border-[var(--border-subtle)] hover:border-[var(--accent)]/50"
+                }
+              `}
+            >
+              <span className={selectedTemplate ? "text-[var(--text-primary)]" : "text-[var(--text-muted)]"}>
+                {selectedTemplate?.name ?? "Selecione um template"}
+              </span>
+              <span
+                className={`text-xs text-[var(--text-muted)] transition-transform ${
+                  isTemplateSelectOpen ? "rotate-180" : ""
+                }`}
+              >
+                ▼
+              </span>
+            </button>
+
+            {templateError && (
+              <span className="text-xs text-red-400">
+                Selecione um template valido para salvar o personagem.
+              </span>
+            )}
+          </div>
+
+          {isTemplateSelectOpen && (
+            <div className="space-y-3 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-2">
+              <input
+                type="text"
+                value={templateSearch}
+                onChange={(e) => handleTemplateSearchChange(e.target.value)}
+                placeholder="Digite para filtrar templates"
+                className="w-full rounded-md border border-[var(--border-subtle)] bg-[var(--bg-card)] px-3 py-2 text-sm outline-none transition focus:border-[var(--accent)]/50"
+              />
+
+              <div className="max-h-44 space-y-2 overflow-y-auto">
+                {filteredTemplates.length > 0 ? (
+                  filteredTemplates.map((template) => {
+                    const isSelected = template.id === selectedTemplateId;
+
+                    return (
+                      <button
+                        key={template.id}
+                        type="button"
+                        onClick={() => handleTemplateSelect(template)}
+                        className={`
+                          w-full rounded-md px-3 py-2 text-left text-sm transition
+                          ${
+                            isSelected
+                              ? "bg-[var(--accent)]/15 text-[var(--accent-soft)]"
+                              : "hover:bg-[var(--bg-card)]"
+                          }
+                        `}
+                      >
+                        {template.name}
+                      </button>
+                    );
+                  })
+                ) : (
+                  <div className="px-3 py-2 text-sm text-[var(--text-muted)]">
+                    Nenhum template encontrado para essa busca.
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
       )}
 
       {selectedTemplate?.sections.map((section) => (
