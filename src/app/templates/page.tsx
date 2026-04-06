@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   ApiError,
@@ -106,7 +106,7 @@ function TemplatePreview({
   );
 }
 
-export default function TemplatesPage() {
+function TemplatesPageContent() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -573,5 +573,19 @@ export default function TemplatesPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function TemplatesPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-[var(--bg-primary)] px-6 py-8 text-sm text-[var(--text-muted)] md:px-10 md:py-10 xl:px-12 xl:py-12">
+          Carregando templates...
+        </div>
+      }
+    >
+      <TemplatesPageContent />
+    </Suspense>
   );
 }
