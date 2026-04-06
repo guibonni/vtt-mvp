@@ -132,10 +132,6 @@ export default function SessionsPage() {
     router.push("/login");
   }
 
-  function handleOpenDeleteSessionModal(session: SessionSummary) {
-    setSessionToDelete(session);
-  }
-
   function handleCloseDeleteSessionModal() {
     setSessionToDelete(null);
   }
@@ -149,16 +145,20 @@ export default function SessionsPage() {
   function SidebarItem({
     icon,
     label,
+    href,
     collapsed,
     active = false,
   }: {
     icon: string;
     label: string;
+    href: string;
     collapsed: boolean;
     active?: boolean;
   }) {
     return (
       <button
+        type="button"
+        onClick={() => router.push(href)}
         className={`
         flex items-center gap-3 px-3 py-2 rounded-lg transition
         ${
@@ -226,7 +226,7 @@ export default function SessionsPage() {
 
           <div className="flex items-center gap-3 mb-10 mt-6">
             <div className="w-10 h-10 rounded-full bg-[var(--accent)]/20 border border-[var(--accent)]/40 flex items-center justify-center text-sm font-medium shadow-[0_0_15px_rgba(124,58,237,0.3)]">
-              {currentUser.charAt(0).toUpperCase()}
+              <span>{currentUser.charAt(0).toUpperCase()}</span>
             </div>
 
             {!isCollapsed && (
@@ -238,7 +238,19 @@ export default function SessionsPage() {
           </div>
 
           <nav className="flex flex-col gap-4 text-sm mt-4">
-            <SidebarItem icon="S" label="Sessões" collapsed={isCollapsed} active />
+            <SidebarItem
+              icon="S"
+              label="Sessões"
+              href="/sessions"
+              collapsed={isCollapsed}
+              active
+            />
+            <SidebarItem
+              icon="T"
+              label="Templates"
+              href="/templates"
+              collapsed={isCollapsed}
+            />
           </nav>
 
           <div className="mt-auto">
@@ -453,7 +465,7 @@ export default function SessionsPage() {
           <div className="relative w-full max-w-md rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-card)] p-6 shadow-[0_0_40px_rgba(0,0,0,0.7)]">
             <h2 className="text-lg font-semibold">Excluir sessao</h2>
             <p className="mt-2 text-sm text-[var(--text-muted)]">
-              Tem certeza que deseja excluir "{sessionToDelete.name}"?
+              Tem certeza que deseja excluir &quot;{sessionToDelete.name}&quot;?
             </p>
 
             <div className="mt-6 flex justify-end gap-3">

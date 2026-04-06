@@ -191,7 +191,7 @@ Um dos diferenciais arquiteturais do projeto.
 ## Estrutura
 
 Cada ficha é baseada em um `CharacterTemplate`, que define:
-
+```
 sections[]
 fields[]
 id
@@ -199,6 +199,7 @@ label
 type (text | number | textarea)
 columnSpan
 dice (opcional)
+```
 
 ### Benefícios
 

@@ -1,6 +1,7 @@
 import { API_BASE_URL } from "@/src/config/api";
 import { Message } from "@/src/models/chat";
 import { Character } from "@/src/models/character";
+import { CharacterTemplate, TemplateSection } from "@/src/models/template";
 import { DiceResult } from "@/src/utils/dice";
 
 const AUTH_COOKIE_NAME = "auth_token";
@@ -36,10 +37,37 @@ type BackendSession = {
   createdById: string;
 };
 
+type BackendTemplateListItem = {
+  id: string;
+  name: string;
+  description?: string | null;
+  createdAt: string;
+  createdBy?: {
+    id: string | number;
+    name: string;
+  } | null;
+  createdById?: string | number | null;
+};
+
+type BackendTemplate = {
+  id: string;
+  name: string;
+  description?: string | null;
+  createdAt: string;
+  data?: TemplateSection[] | null;
+  sections?: TemplateSection[] | null;
+  createdBy?: {
+    id: string | number;
+    name: string;
+  } | null;
+  createdById?: string | number | null;
+};
+
 type BackendCharacterListItem = {
   id: string;
   name: string;
-  template: string;
+  templateId: string;
+  template?: BackendCharacterTemplateRef;
   data: Record<string, unknown>;
   createdAt: string;
   user?: {
@@ -51,11 +79,21 @@ type BackendCharacterListItem = {
 type BackendCharacter = {
   id: string;
   name: string;
-  template: string;
+  templateId: string;
+  template?: BackendCharacterTemplateRef;
   data: Record<string, unknown>;
   createdAt: string;
   userId: string;
   sessionId: string;
+};
+
+type BackendCharacterTemplateRef = {
+  id: string;
+  name: string;
+  description?: string | null;
+  data?: TemplateSection[] | null;
+  sections?: TemplateSection[] | null;
+  createdAt?: string | null;
 };
 
 type BackendMessage = {
@@ -84,6 +122,19 @@ export type SessionDetails = {
   name: string;
   createdAt: Date;
   createdById: string;
+};
+
+export type TemplateSummary = {
+  id: string;
+  name: string;
+  description?: string;
+  createdAt: Date;
+  ownerName: string | null;
+  isOwnedByCurrentUser: boolean;
+};
+
+export type TemplateDetails = TemplateSummary & {
+  sections: TemplateSection[];
 };
 
 export class ApiError extends Error {
@@ -207,6 +258,37 @@ function mapSessionDetails(session: BackendSession): SessionDetails {
   };
 }
 
+function mapTemplateSummary(template: BackendTemplateListItem): TemplateSummary {
+  const currentUserId = getAuthUserId();
+  const templateOwnerId = toNullableString(template.createdBy?.id ?? template.createdById);
+
+  return {
+    id: template.id,
+    name: template.name,
+    description: template.description ?? undefined,
+    createdAt: new Date(template.createdAt),
+    ownerName: template.createdBy?.name ?? null,
+    isOwnedByCurrentUser: !!currentUserId && templateOwnerId === currentUserId,
+  };
+}
+
+function mapTemplateDetails(template: BackendTemplate): TemplateDetails {
+  return {
+    ...mapTemplateSummary(template),
+    sections: template.data ?? template.sections ?? [],
+  };
+}
+
+function mapCharacterTemplate(template: BackendCharacterTemplateRef): CharacterTemplate {
+  return {
+    id: template.id,
+    name: template.name,
+    description: template.description ?? undefined,
+    sections: template.data ?? template.sections ?? [],
+    createdAt: template.createdAt ? new Date(template.createdAt) : new Date(),
+  };
+}
+
 function mapCharacter(
   character: BackendCharacter | BackendCharacterListItem,
   fallbackOwner: string
@@ -214,7 +296,8 @@ function mapCharacter(
   return {
     id: character.id,
     name: character.name,
-    templateId: character.template,
+    templateId: character.templateId ?? character.template?.id ?? "",
+    template: character.template ? mapCharacterTemplate(character.template) : undefined,
     values: character.data ?? {},
     owner: "user" in character && character.user ? character.user.name : fallbackOwner,
     createdAt: new Date(character.createdAt),
@@ -301,6 +384,60 @@ export async function createSession(input: { name: string; password?: string }) 
   } satisfies SessionSummary;
 }
 
+export async function listTemplates(input: {
+  userId?: string;
+  name?: string;
+} = {}) {
+  const params = new URLSearchParams();
+
+  if (input.userId?.trim()) {
+    params.set("userId", input.userId.trim());
+  }
+
+  if (input.name?.trim()) {
+    params.set("name", input.name.trim());
+  }
+
+  const query = params.toString();
+  const path = query ? `/templates?${query}` : "/templates";
+  const templates = await apiRequest<BackendTemplateListItem[]>(path);
+
+  return templates.map(mapTemplateSummary);
+}
+
+export async function createTemplate(input: {
+  name: string;
+  data: Array<{
+    id: string;
+    title: string;
+    fields: Array<{
+      id: string;
+      label: string;
+      type: "text" | "number" | "textarea";
+      columnSpan: number;
+      dice?: string;
+    }>;
+  }>;
+}) {
+  await apiRequest("/templates", {
+    method: "POST",
+    body: {
+      name: input.name,
+      data: input.data,
+    },
+  });
+}
+
+export async function getTemplate(templateId: string) {
+  const template = await apiRequest<BackendTemplate>(`/templates/${templateId}`);
+  return mapTemplateDetails(template);
+}
+
+export async function listCharacterTemplates() {
+  const templates = await apiRequest<BackendTemplate[]>("/templates");
+  return templates.map(mapTemplateDetails);
+}
+
 export async function joinSession(input: { sessionId: string; password?: string }) {
   await apiRequest("/sessions/join", {
     method: "POST",
@@ -326,14 +463,18 @@ export async function listCharacters(sessionId: string) {
 
 export async function createCharacter(
   sessionId: string,
-  input: { name: string; template: string; data: Record<string, unknown> }
+  input: { name: string; templateId: string; data: Record<string, unknown> }
 ) {
   const currentUser = getAuthUserName() ?? "Voce";
   const character = await apiRequest<BackendCharacter>(
     `/sessions/${sessionId}/characters`,
     {
       method: "POST",
-      body: input,
+      body: {
+        name: input.name,
+        templateId: input.templateId,
+        data: input.data,
+      },
     }
   );
 
