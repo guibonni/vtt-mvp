@@ -4,7 +4,9 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { login } from "@/src/services/auth";
 import {
+  applyTheme,
   ApiError,
+  getThemeFromPreferences,
   getUserPreferencesRequest,
   saveUserPreferences,
   setAuthSession,
@@ -36,6 +38,7 @@ export default function LoginPage() {
 
       const preferences = await getUserPreferencesRequest(response.token);
       saveUserPreferences(preferences);
+      applyTheme(getThemeFromPreferences(preferences));
       setAuthSession(response.token, response.user.name, response.user.id);
       router.push("/sessions");
     } catch (err) {

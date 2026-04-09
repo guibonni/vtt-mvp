@@ -347,6 +347,12 @@ function TemplatesPageContent() {
               collapsed={isCollapsed}
               active
             />
+            <SidebarItem
+              icon="P"
+              label="Preferencias"
+              href="/preferences"
+              collapsed={isCollapsed}
+            />
           </nav>
 
           <div className="mt-auto">

@@ -23,6 +23,11 @@ type ErrorPayload = {
 };
 
 export type UserPreferences = Record<string, unknown>;
+export type ThemeMode = "dark" | "light";
+
+type UserPreferencesResponse = {
+  preferences?: UserPreferences | null;
+};
 
 type BackendSessionListItem = {
   id: string;
@@ -236,6 +241,27 @@ export function getUserPreferences() {
   }
 }
 
+export function getThemeFromPreferences(
+  preferences: UserPreferences | null | undefined
+): ThemeMode {
+  const theme = preferences?.theme;
+  return theme === "light" ? "light" : "dark";
+}
+
+export function updateUserPreferences(
+  updater: (preferences: UserPreferences) => UserPreferences
+) {
+  const currentPreferences = getUserPreferences() ?? {};
+  const nextPreferences = updater(currentPreferences);
+  saveUserPreferences(nextPreferences);
+  return nextPreferences;
+}
+
+export function applyTheme(theme: ThemeMode) {
+  if (typeof document === "undefined") return;
+  document.documentElement.dataset.theme = theme;
+}
+
 async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const token = options.token ?? getAuthToken();
   const headers = new Headers({
@@ -364,6 +390,21 @@ function toNullableString(value: unknown): string | null {
   return null;
 }
 
+function normalizeUserPreferences(payload: UserPreferences | UserPreferencesResponse | null) {
+  if (!payload) return {};
+
+  if (
+    "preferences" in payload &&
+    payload.preferences &&
+    typeof payload.preferences === "object" &&
+    !Array.isArray(payload.preferences)
+  ) {
+    return payload.preferences;
+  }
+
+  return payload as UserPreferences;
+}
+
 function mapMessage(
   message: BackendMessage,
   fallbackAuthor: string,
@@ -393,9 +434,28 @@ export async function listSessions() {
 }
 
 export async function getUserPreferencesRequest(token?: string | null) {
-  return apiRequest<UserPreferences>("/user/preferences", {
-    token,
-  });
+  const payload = await apiRequest<UserPreferences | UserPreferencesResponse>(
+    "/user/preferences",
+    {
+      token,
+    }
+  );
+
+  return normalizeUserPreferences(payload);
+}
+
+export async function updateUserPreferencesRequest(preferences: UserPreferences) {
+  const payload = await apiRequest<UserPreferences | UserPreferencesResponse>(
+    "/user/preferences",
+    {
+      method: "PUT",
+      body: {
+        preferences,
+      },
+    }
+  );
+
+  return normalizeUserPreferences(payload);
 }
 
 export async function createSession(input: { name: string; password?: string }) {

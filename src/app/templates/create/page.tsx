@@ -509,6 +509,13 @@ export default function CreateTemplatePage() {
               active
               onNavigate={router.push}
             />
+            <SidebarItem
+              icon="P"
+              label="Preferencias"
+              href="/preferences"
+              collapsed={isCollapsed}
+              onNavigate={router.push}
+            />
           </nav>
 
           <div className="mt-auto">

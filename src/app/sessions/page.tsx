@@ -268,6 +268,12 @@ export default function SessionsPage() {
               href="/templates"
               collapsed={isCollapsed}
             />
+            <SidebarItem
+              icon="P"
+              label="Preferencias"
+              href="/preferences"
+              collapsed={isCollapsed}
+            />
           </nav>
 
           <div className="mt-auto">
