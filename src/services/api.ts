@@ -25,6 +25,7 @@ type BackendSessionListItem = {
   id: string;
   name: string;
   createdAt: string;
+  isParticipant: boolean;
   createdBy: {
     name: string;
   };
@@ -115,6 +116,7 @@ export type SessionSummary = {
   name: string;
   gm: string;
   createdAt: Date;
+  isParticipant: boolean;
 };
 
 export type SessionDetails = {
@@ -246,6 +248,7 @@ function mapSessionSummary(session: BackendSessionListItem): SessionSummary {
     name: session.name,
     gm: session.createdBy.name,
     createdAt: new Date(session.createdAt),
+    isParticipant: session.isParticipant,
   };
 }
 
@@ -381,6 +384,7 @@ export async function createSession(input: { name: string; password?: string }) 
     name: session.name,
     gm: currentUser,
     createdAt: new Date(session.createdAt),
+    isParticipant: true,
   } satisfies SessionSummary;
 }
 

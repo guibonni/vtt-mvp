@@ -18,6 +18,7 @@ export default function SessionsPage() {
   const [isVisible, setIsVisible] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [isEnteringSession, setIsEnteringSession] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [joinError, setJoinError] = useState<string | null>(null);
   const currentUser = getAuthUserName() ?? "Voce";
@@ -99,11 +100,24 @@ export default function SessionsPage() {
     setNewSessionPassword("");
   }
 
-  function handleOpenSession(session: SessionSummary) {
+  async function handleOpenSession(session: SessionSummary) {
     setOpenSessionMenuId(null);
+    setJoinError(null);
+
+    if (session.isParticipant) {
+      setIsEnteringSession(true);
+
+      try {
+        router.push(`/sessions/${session.id}`);
+      } finally {
+        setIsEnteringSession(false);
+      }
+
+      return;
+    }
+
     setSelectedSession(session);
     setSessionPassword("");
-    setJoinError(null);
   }
 
   function handleCloseSessionPrompt() {
@@ -116,6 +130,7 @@ export default function SessionsPage() {
     if (!selectedSession) return;
 
     try {
+      setIsEnteringSession(true);
       await joinSession({
         sessionId: selectedSession.id,
         password: sessionPassword.trim() || undefined,
@@ -124,6 +139,8 @@ export default function SessionsPage() {
       router.push(`/sessions/${selectedSession.id}`);
     } catch (err) {
       setJoinError(err instanceof Error ? err.message : "Falha ao entrar na sessao.");
+    } finally {
+      setIsEnteringSession(false);
     }
   }
 
@@ -296,7 +313,7 @@ export default function SessionsPage() {
             {sessions.map((session) => (
               <div
                 key={session.id}
-                onClick={() => handleOpenSession(session)}
+                onClick={() => void handleOpenSession(session)}
                 className="relative bg-[var(--bg-card)] border border-[var(--border-subtle)] rounded-xl p-6 transition cursor-pointer hover:border-[var(--accent)]/40 hover:shadow-[0_0_30px_rgba(124,58,237,0.15)]"
               >
                 {session.gm === currentUser && (
@@ -385,9 +402,10 @@ export default function SessionsPage() {
 
               <button
                 onClick={() => void handleEnterSession()}
-                className="px-4 py-2 text-sm rounded-lg bg-[var(--accent)] hover:bg-[var(--accent-hover)] transition"
+                className="px-4 py-2 text-sm rounded-lg bg-[var(--accent)] hover:bg-[var(--accent-hover)] transition disabled:cursor-not-allowed disabled:opacity-60"
+                disabled={isEnteringSession}
               >
-                Entrar
+                {isEnteringSession ? "Entrando..." : "Entrar"}
               </button>
             </div>
           </div>
