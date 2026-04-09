@@ -2,12 +2,12 @@
 
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { AppSidebar } from "@/src/components/navigation/AppSidebar";
 import {
   ApiError,
   clearAuthSession,
   getTemplate,
   getAuthUserId,
-  getAuthUserName,
   listTemplates,
   TemplateDetails,
   TemplateSummary,
@@ -111,13 +111,11 @@ function TemplatesPageContent() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  const currentUser = getAuthUserName() ?? "Voce";
   const currentUserId = getAuthUserId();
   const activeTab = searchParams.get("tab") === "mine" ? "mine" : "all";
   const name = searchParams.get("name") ?? "";
 
   const [isVisible, setIsVisible] = useState(false);
-  const [isCollapsed, setIsCollapsed] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [templates, setTemplates] = useState<TemplateSummary[]>([]);
@@ -209,11 +207,6 @@ function TemplatesPageContent() {
     updateQueryParam("tab", tab === "all" ? undefined : tab);
   }
 
-  function handleLogout() {
-    clearAuthSession();
-    router.push("/login");
-  }
-
   async function handleOpenTemplatePreview(template: TemplateSummary) {
     setIsPreviewLoading(true);
     setPreviewError(null);
@@ -243,39 +236,6 @@ function TemplatesPageContent() {
     setIsPreviewLoading(false);
   }
 
-  function SidebarItem({
-    icon,
-    label,
-    href,
-    collapsed,
-    active = false,
-  }: {
-    icon: string;
-    label: string;
-    href: string;
-    collapsed: boolean;
-    active?: boolean;
-  }) {
-    return (
-      <button
-        type="button"
-        onClick={() => router.push(href)}
-        className={`
-          flex items-center gap-3 px-3 py-2 rounded-lg transition text-left
-          ${
-            active
-              ? "bg-[var(--accent)]/10 text-[var(--accent-soft)]"
-              : "text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card)]"
-          }
-        `}
-        title={collapsed ? label : undefined}
-      >
-        <span className="text-base">{icon}</span>
-        {!collapsed && <span>{label}</span>}
-      </button>
-    );
-  }
-
   return (
     <div className="relative min-h-screen overflow-hidden bg-[var(--bg-primary)] text-[var(--text-primary)]">
       <div className="absolute inset-0 pointer-events-none">
@@ -299,76 +259,7 @@ function TemplatesPageContent() {
       </svg>
 
       <div className="relative z-10 flex min-h-screen">
-        <aside
-          className={`
-            relative flex flex-col border-r border-[var(--border-primary)] bg-[var(--bg-secondary)] px-4 py-8
-            transition-all duration-300 ease-in-out
-            ${isCollapsed ? "w-20" : "w-64"}
-          `}
-        >
-          <button
-            type="button"
-            onClick={() => setIsCollapsed((prev) => !prev)}
-            className="absolute top-4 right-4 text-[var(--text-muted)] transition hover:text-[var(--text-primary)]"
-          >
-            <svg
-              className={`h-4 w-4 transition-transform duration-300 ${isCollapsed ? "rotate-180" : ""}`}
-              viewBox="0 0 24 24"
-              fill="currentColor"
-            >
-              <path d="M15 18l-6-6 6-6" />
-            </svg>
-          </button>
-
-          <div className="mt-6 mb-10 flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full border border-[var(--accent)]/40 bg-[var(--accent)]/20 text-sm font-medium shadow-[0_0_15px_rgba(124,58,237,0.3)]">
-              <span>{currentUser.charAt(0).toUpperCase()}</span>
-            </div>
-
-            {!isCollapsed && (
-              <div>
-                <div className="text-sm font-medium">{currentUser}</div>
-                <div className="text-xs text-[var(--text-muted)]">Aventureiro</div>
-              </div>
-            )}
-          </div>
-
-          <nav className="mt-4 flex flex-col gap-4 text-sm">
-            <SidebarItem
-              icon="S"
-              label="Sessoes"
-              href="/sessions"
-              collapsed={isCollapsed}
-            />
-            <SidebarItem
-              icon="T"
-              label="Templates"
-              href="/templates"
-              collapsed={isCollapsed}
-              active
-            />
-            <SidebarItem
-              icon="P"
-              label="Preferencias"
-              href="/preferences"
-              collapsed={isCollapsed}
-            />
-          </nav>
-
-          <div className="mt-auto">
-            <button
-              type="button"
-              onClick={handleLogout}
-              className="mb-3 w-full rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-card)] px-4 py-2 text-sm transition hover:border-[var(--accent)]/40"
-            >
-              Logout
-            </button>
-          </div>
-
-          <div className="text-xs text-[var(--text-muted)]">
-            {!isCollapsed && "Portal Arcano"}
-          </div>
-        </aside>
+        <AppSidebar activeSection="templates" />
 
         <main className="flex-1 overflow-y-auto px-6 py-8 md:px-10 md:py-10 xl:px-12 xl:py-12">
           <div className="mx-auto max-w-6xl">

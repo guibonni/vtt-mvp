@@ -2,11 +2,11 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { AppSidebar } from "@/src/components/navigation/AppSidebar";
 import {
   applyTheme,
   ApiError,
   clearAuthSession,
-  getAuthUserName,
   getNotificationSoundFromPreferences,
   getThemeFromPreferences,
   getUserPreferences,
@@ -16,46 +16,8 @@ import {
 } from "@/src/services/api";
 import { playNotificationSound } from "@/src/utils/notificationSound";
 
-function SidebarItem({
-  icon,
-  label,
-  href,
-  collapsed,
-  active = false,
-  onNavigate,
-}: {
-  icon: string;
-  label: string;
-  href: string;
-  collapsed: boolean;
-  active?: boolean;
-  onNavigate: (href: string) => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={() => onNavigate(href)}
-      className={`
-        flex items-center gap-3 rounded-lg px-3 py-2 text-left transition
-        ${
-          active
-            ? "bg-[var(--accent)]/10 text-[var(--accent-soft)]"
-            : "text-[var(--text-muted)] hover:bg-[var(--bg-card)] hover:text-[var(--text-primary)]"
-        }
-      `}
-      title={collapsed ? label : undefined}
-    >
-      <span className="text-base">{icon}</span>
-      {!collapsed && <span>{label}</span>}
-    </button>
-  );
-}
-
 export default function PreferencesPage() {
   const router = useRouter();
-  const currentUser = getAuthUserName() ?? "Voce";
-
-  const [isCollapsed, setIsCollapsed] = useState(false);
   const [preferences, setPreferences] = useState<UserPreferences>(
     () => getUserPreferences() ?? {}
   );
@@ -68,11 +30,6 @@ export default function PreferencesPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
-
-  function handleLogout() {
-    clearAuthSession();
-    router.push("/login");
-  }
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
@@ -162,79 +119,7 @@ export default function PreferencesPage() {
       </svg>
 
       <div className="relative z-10 flex min-h-screen">
-        <aside
-          className={`
-            relative flex flex-col border-r border-[var(--border-primary)] bg-[var(--bg-secondary)] px-4 py-8
-            transition-all duration-300 ease-in-out
-            ${isCollapsed ? "w-20" : "w-64"}
-          `}
-        >
-          <button
-            type="button"
-            onClick={() => setIsCollapsed((prev) => !prev)}
-            className="absolute top-4 right-4 text-[var(--text-muted)] transition hover:text-[var(--text-primary)]"
-          >
-            <svg
-              className={`h-4 w-4 transition-transform duration-300 ${isCollapsed ? "rotate-180" : ""}`}
-              viewBox="0 0 24 24"
-              fill="currentColor"
-            >
-              <path d="M15 18l-6-6 6-6" />
-            </svg>
-          </button>
-
-          <div className="mt-6 mb-10 flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full border border-[var(--accent)]/40 bg-[var(--accent)]/20 text-sm font-medium shadow-[0_0_15px_rgba(124,58,237,0.3)]">
-              <span>{currentUser.charAt(0).toUpperCase()}</span>
-            </div>
-
-            {!isCollapsed && (
-              <div>
-                <div className="text-sm font-medium">{currentUser}</div>
-                <div className="text-xs text-[var(--text-muted)]">Aventureiro</div>
-              </div>
-            )}
-          </div>
-
-          <nav className="mt-4 flex flex-col gap-4 text-sm">
-            <SidebarItem
-              icon="S"
-              label="Sessoes"
-              href="/sessions"
-              collapsed={isCollapsed}
-              onNavigate={router.push}
-            />
-            <SidebarItem
-              icon="T"
-              label="Templates"
-              href="/templates"
-              collapsed={isCollapsed}
-              onNavigate={router.push}
-            />
-            <SidebarItem
-              icon="P"
-              label="Preferencias"
-              href="/preferences"
-              collapsed={isCollapsed}
-              active
-              onNavigate={router.push}
-            />
-          </nav>
-
-          <div className="mt-auto">
-            <button
-              type="button"
-              onClick={handleLogout}
-              className="mb-3 w-full rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-card)] px-4 py-2 text-sm transition hover:border-[var(--accent)]/40"
-            >
-              Logout
-            </button>
-          </div>
-
-          <div className="text-xs text-[var(--text-muted)]">
-            {!isCollapsed && "Portal Arcano"}
-          </div>
-        </aside>
+        <AppSidebar activeSection="preferences" />
 
         <main className="flex-1 overflow-y-auto px-6 py-8 md:px-10 md:py-10 xl:px-12 xl:py-12">
           <div className="mx-auto max-w-3xl">
