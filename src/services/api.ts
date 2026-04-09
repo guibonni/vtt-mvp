@@ -7,6 +7,7 @@ import { DiceResult } from "@/src/utils/dice";
 const AUTH_COOKIE_NAME = "auth_token";
 const USER_NAME_COOKIE_NAME = "auth_user_name";
 const USER_ID_COOKIE_NAME = "auth_user_id";
+const USER_PREFERENCES_STORAGE_KEY = "user_preferences";
 const COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24;
 
 type HttpMethod = "GET" | "POST" | "PUT" | "DELETE";
@@ -20,6 +21,8 @@ type RequestOptions = {
 type ErrorPayload = {
   message?: string;
 };
+
+export type UserPreferences = Record<string, unknown>;
 
 type BackendSessionListItem = {
   id: string;
@@ -212,6 +215,27 @@ export function clearAuthSession() {
   document.cookie = `${USER_ID_COOKIE_NAME}=; Path=/; Max-Age=0; SameSite=Lax`;
 }
 
+export function saveUserPreferences(preferences: UserPreferences) {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(
+    USER_PREFERENCES_STORAGE_KEY,
+    JSON.stringify(preferences)
+  );
+}
+
+export function getUserPreferences() {
+  if (typeof window === "undefined") return null;
+
+  const stored = window.localStorage.getItem(USER_PREFERENCES_STORAGE_KEY);
+  if (!stored) return null;
+
+  try {
+    return JSON.parse(stored) as UserPreferences;
+  } catch {
+    return null;
+  }
+}
+
 async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const token = options.token ?? getAuthToken();
   const headers = new Headers({
@@ -366,6 +390,12 @@ function mapMessage(
 export async function listSessions() {
   const sessions = await apiRequest<BackendSessionListItem[]>("/sessions");
   return sessions.map(mapSessionSummary);
+}
+
+export async function getUserPreferencesRequest(token?: string | null) {
+  return apiRequest<UserPreferences>("/user/preferences", {
+    token,
+  });
 }
 
 export async function createSession(input: { name: string; password?: string }) {
