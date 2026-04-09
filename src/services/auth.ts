@@ -15,7 +15,11 @@ type ErrorPayload = {
   message?: string;
 };
 
-async function authRequest(path: string, body: Record<string, string>) {
+type RegisterStartResponse = {
+  message?: string;
+};
+
+async function authRequest<T>(path: string, body: Record<string, string>) {
   const response = await fetch(`${API_BASE_URL}${path}`, {
     method: "POST",
     headers: {
@@ -24,18 +28,18 @@ async function authRequest(path: string, body: Record<string, string>) {
     body: JSON.stringify(body),
   });
 
-  const payload = (await response.json()) as AuthResponse | ErrorPayload;
+  const payload = (await response.json()) as T | ErrorPayload;
 
   if (!response.ok) {
     const message = (payload as ErrorPayload).message ?? "Falha de autenticação";
     throw new ApiError(message, response.status);
   }
 
-  return payload as AuthResponse;
+  return payload as T;
 }
 
 export async function login(credentials: { email: string; password: string }) {
-  return authRequest("/auth/login", credentials);
+  return authRequest<AuthResponse>("/auth/login", credentials);
 }
 
 export async function register(input: {
@@ -43,5 +47,9 @@ export async function register(input: {
   email: string;
   password: string;
 }) {
-  return authRequest("/auth/register", input);
+  return authRequest<RegisterStartResponse>("/auth/register", input);
+}
+
+export async function verifyRegister(input: { email: string; code: string }) {
+  return authRequest<AuthResponse>("/auth/register/verify", input);
 }
