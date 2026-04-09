@@ -7,12 +7,14 @@ import {
   ApiError,
   clearAuthSession,
   getAuthUserName,
+  getNotificationSoundFromPreferences,
   getThemeFromPreferences,
   getUserPreferences,
   saveUserPreferences,
   updateUserPreferencesRequest,
-  updateUserPreferences,
+  type UserPreferences,
 } from "@/src/services/api";
+import { playNotificationSound } from "@/src/utils/notificationSound";
 
 function SidebarItem({
   icon,
@@ -54,8 +56,14 @@ export default function PreferencesPage() {
   const currentUser = getAuthUserName() ?? "Voce";
 
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [preferences, setPreferences] = useState<UserPreferences>(
+    () => getUserPreferences() ?? {}
+  );
   const [isLightMode, setIsLightMode] = useState(
     () => getThemeFromPreferences(getUserPreferences()) === "light"
+  );
+  const [notificationSound, setNotificationSound] = useState(
+    () => getNotificationSoundFromPreferences(getUserPreferences())
   );
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -73,14 +81,16 @@ export default function PreferencesPage() {
     setSaveMessage(null);
 
     const nextTheme = isLightMode ? "light" : "dark";
-    const preferences = updateUserPreferences((current) => ({
-      ...current,
+    const nextPreferences = {
+      ...preferences,
       theme: nextTheme,
-    }));
+      notificationSound,
+    };
 
     try {
-      const savedPreferences = await updateUserPreferencesRequest(preferences);
+      const savedPreferences = await updateUserPreferencesRequest(nextPreferences);
       saveUserPreferences(savedPreferences);
+      setPreferences(savedPreferences);
       setSaveMessage("Preferencias salvas com sucesso.");
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
@@ -101,17 +111,32 @@ export default function PreferencesPage() {
     setIsLightMode((prev) => {
       const nextIsLightMode = !prev;
       const nextTheme = nextIsLightMode ? "light" : "dark";
-      const preferences = updateUserPreferences((current) => ({
-        ...current,
+      const nextPreferences = {
+        ...preferences,
         theme: nextTheme,
-      }));
+      };
 
-      applyTheme(getThemeFromPreferences(preferences));
+      setPreferences(nextPreferences);
+      applyTheme(getThemeFromPreferences(nextPreferences));
       setError(null);
       setSaveMessage(null);
 
       return nextIsLightMode;
     });
+  }
+
+  function handleNotificationSoundChange(
+    e: React.ChangeEvent<HTMLInputElement>
+  ) {
+    const nextNotificationSound = Number(e.target.value);
+    setNotificationSound(nextNotificationSound);
+    setPreferences((current) => ({
+      ...current,
+      notificationSound: nextNotificationSound,
+    }));
+    setError(null);
+    setSaveMessage(null);
+    playNotificationSound(nextNotificationSound);
   }
 
   return (
@@ -255,6 +280,45 @@ export default function PreferencesPage() {
                       }`}
                     />
                   </button>
+                </div>
+              </div>
+
+              <div className="mt-4 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-card)] p-5">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <h2 className="text-lg font-medium">Volume da notificacao</h2>
+                    <p className="mt-1 text-sm text-[var(--text-secondary)]">
+                      Ajuste o volume do som reproduzido quando novas mensagens chegam no chat.
+                    </p>
+                  </div>
+
+                  <div className="rounded-full border border-[var(--border-subtle)] bg-[var(--bg-surface)] px-3 py-1 text-sm">
+                    {notificationSound}%
+                  </div>
+                </div>
+
+                <div className="mt-4">
+                  <input
+                    type="range"
+                    min={0}
+                    max={100}
+                    step={1}
+                    value={notificationSound}
+                    onChange={handleNotificationSoundChange}
+                    className="w-full accent-[var(--accent)]"
+                  />
+                </div>
+
+                <div className="mt-2 flex items-center justify-between text-xs text-[var(--text-muted)]">
+                  <span>Silencioso</span>
+                  <button
+                    type="button"
+                    onClick={() => playNotificationSound(notificationSound)}
+                    className="text-[var(--accent-soft)] transition hover:text-[var(--text-primary)]"
+                  >
+                    Ouvir novamente
+                  </button>
+                  <span>Mais alto</span>
                 </div>
               </div>
 

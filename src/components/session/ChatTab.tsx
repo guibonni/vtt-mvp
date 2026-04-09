@@ -5,8 +5,13 @@ import Tooltip from "../ui/Tooltip";
 import React from "react";
 import { useEscapeKey } from "@/src/hooks/useEscapeKey";
 import { rollExpression } from "@/src/utils/dice";
+import { playNotificationSound } from "@/src/utils/notificationSound";
 import { useSession } from "./SessionContext";
-import { getAuthUserId } from "@/src/services/api";
+import {
+  getAuthUserId,
+  getNotificationSoundFromPreferences,
+  getUserPreferences,
+} from "@/src/services/api";
 
 export default function ChatTab() {
   const [showDiceMenu, setShowDiceMenu] = useState(false);
@@ -19,45 +24,6 @@ export default function ChatTab() {
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const diceRef = useRef<HTMLDivElement | null>(null);
   const previousMessageCountRef = useRef(0);
-
-  function playNotificationSound() {
-    if (typeof window === "undefined") return;
-    const AudioContextConstructor = window.AudioContext;
-    if (!AudioContextConstructor) return;
-
-    const context = new AudioContextConstructor();
-    const now = context.currentTime;
-    const beepDuration = 0.13;
-    const gap = 0.001;
-
-    const scheduleBeep = (startAt: number, frequency: number) => {
-      const oscillator = context.createOscillator();
-      const gain = context.createGain();
-
-      oscillator.type = "sine";
-      oscillator.frequency.setValueAtTime(frequency, startAt);
-      oscillator.frequency.exponentialRampToValueAtTime(
-        frequency * 1.18,
-        startAt + beepDuration
-      );
-
-      gain.gain.setValueAtTime(0.0001, startAt);
-      gain.gain.exponentialRampToValueAtTime(0.16, startAt + 0.01);
-      gain.gain.exponentialRampToValueAtTime(0.0001, startAt + beepDuration);
-
-      oscillator.connect(gain);
-      gain.connect(context.destination);
-      oscillator.start(startAt);
-      oscillator.stop(startAt + beepDuration);
-    };
-
-    scheduleBeep(now, 820);
-    scheduleBeep(now + beepDuration + gap, 980);
-
-    window.setTimeout(() => {
-      void context.close();
-    }, Math.ceil((beepDuration * 2 + gap + 0.05) * 1000));
-  }
 
   function sendRollFromExpression(expression: string) {
     const match = expression.match(/^(\d+d\d+)([+-]\d+)?$/);
@@ -171,7 +137,9 @@ export default function ChatTab() {
     }
 
     if (currentCount > previousCount) {
-      playNotificationSound();
+      playNotificationSound(
+        getNotificationSoundFromPreferences(getUserPreferences())
+      );
     }
 
     previousMessageCountRef.current = currentCount;

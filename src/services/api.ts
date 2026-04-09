@@ -248,6 +248,18 @@ export function getThemeFromPreferences(
   return theme === "light" ? "light" : "dark";
 }
 
+export function getNotificationSoundFromPreferences(
+  preferences: UserPreferences | null | undefined
+) {
+  const notificationSound = preferences?.notificationSound;
+
+  if (typeof notificationSound === "number" && Number.isFinite(notificationSound)) {
+    return Math.min(100, Math.max(0, Math.round(notificationSound)));
+  }
+
+  return 16;
+}
+
 export function updateUserPreferences(
   updater: (preferences: UserPreferences) => UserPreferences
 ) {
