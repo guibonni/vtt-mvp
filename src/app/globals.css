@@ -1,6 +1,11 @@
 @import "tailwindcss";
 
 @theme {
+  --font-sans: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+}
+
+:root,
+html[data-theme="dark"] {
   /* Backgrounds */
   --bg-primary: #0e0e14;
   --bg-secondary: #141421;
@@ -23,6 +28,33 @@
 
   /* Special */
   --highlight-gold: #f59e0b;
+}
+
+html[data-theme="light"] {
+  --bg-primary: #f4efe4;
+  --bg-secondary: #ebe2d2;
+  --bg-surface: #fffaf0;
+  --bg-card: #f8f1e4;
+
+  --border-primary: #d7c8af;
+  --border-subtle: #e2d6c1;
+
+  --text-primary: #2c2218;
+  --text-secondary: #6f5e4d;
+  --text-muted: #9a866f;
+
+  --accent: #b45309;
+  --accent-hover: #c26912;
+  --accent-soft: #8b5e34;
+
+  --highlight-gold: #d97706;
+}
+
+html,
+body {
+  min-height: 100%;
+  background: var(--bg-primary);
+  color: var(--text-primary);
 }
 
 * {

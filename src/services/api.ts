@@ -7,6 +7,7 @@ import { DiceResult } from "@/src/utils/dice";
 const AUTH_COOKIE_NAME = "auth_token";
 const USER_NAME_COOKIE_NAME = "auth_user_name";
 const USER_ID_COOKIE_NAME = "auth_user_id";
+const USER_PREFERENCES_STORAGE_KEY = "user_preferences";
 const COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24;
 
 type HttpMethod = "GET" | "POST" | "PUT" | "DELETE";
@@ -21,10 +22,18 @@ type ErrorPayload = {
   message?: string;
 };
 
+export type UserPreferences = Record<string, unknown>;
+export type ThemeMode = "dark" | "light";
+
+type UserPreferencesResponse = {
+  preferences?: UserPreferences | null;
+};
+
 type BackendSessionListItem = {
   id: string;
   name: string;
   createdAt: string;
+  isParticipant: boolean;
   createdBy: {
     name: string;
   };
@@ -115,6 +124,7 @@ export type SessionSummary = {
   name: string;
   gm: string;
   createdAt: Date;
+  isParticipant: boolean;
 };
 
 export type SessionDetails = {
@@ -210,6 +220,60 @@ export function clearAuthSession() {
   document.cookie = `${USER_ID_COOKIE_NAME}=; Path=/; Max-Age=0; SameSite=Lax`;
 }
 
+export function saveUserPreferences(preferences: UserPreferences) {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(
+    USER_PREFERENCES_STORAGE_KEY,
+    JSON.stringify(preferences)
+  );
+}
+
+export function getUserPreferences() {
+  if (typeof window === "undefined") return null;
+
+  const stored = window.localStorage.getItem(USER_PREFERENCES_STORAGE_KEY);
+  if (!stored) return null;
+
+  try {
+    return JSON.parse(stored) as UserPreferences;
+  } catch {
+    return null;
+  }
+}
+
+export function getThemeFromPreferences(
+  preferences: UserPreferences | null | undefined
+): ThemeMode {
+  const theme = preferences?.theme;
+  return theme === "light" ? "light" : "dark";
+}
+
+export function getNotificationSoundFromPreferences(
+  preferences: UserPreferences | null | undefined
+) {
+  const notificationSound = preferences?.notificationSound;
+
+  if (typeof notificationSound === "number" && Number.isFinite(notificationSound)) {
+    return Math.min(100, Math.max(0, Math.round(notificationSound)));
+  }
+
+  return 16;
+}
+
+export function updateUserPreferences(
+  updater: (preferences: UserPreferences) => UserPreferences
+) {
+  const currentPreferences = getUserPreferences() ?? {};
+  const nextPreferences = updater(currentPreferences);
+  saveUserPreferences(nextPreferences);
+  return nextPreferences;
+}
+
+export function applyTheme(theme: ThemeMode) {
+  if (typeof document === "undefined") return;
+  document.documentElement.dataset.theme = theme;
+}
+
 async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const token = options.token ?? getAuthToken();
   const headers = new Headers({
@@ -246,6 +310,7 @@ function mapSessionSummary(session: BackendSessionListItem): SessionSummary {
     name: session.name,
     gm: session.createdBy.name,
     createdAt: new Date(session.createdAt),
+    isParticipant: session.isParticipant,
   };
 }
 
@@ -337,6 +402,23 @@ function toNullableString(value: unknown): string | null {
   return null;
 }
 
+function normalizeUserPreferences(
+  payload: UserPreferences | UserPreferencesResponse | null
+): UserPreferences {
+  if (!payload) return {};
+
+  if (
+    "preferences" in payload &&
+    payload.preferences &&
+    typeof payload.preferences === "object" &&
+    !Array.isArray(payload.preferences)
+  ) {
+    return payload.preferences as UserPreferences;
+  }
+
+  return payload as UserPreferences;
+}
+
 function mapMessage(
   message: BackendMessage,
   fallbackAuthor: string,
@@ -365,6 +447,33 @@ export async function listSessions() {
   return sessions.map(mapSessionSummary);
 }
 
+export async function getUserPreferencesRequest(token?: string | null) {
+  const payload = await apiRequest<UserPreferences | UserPreferencesResponse>(
+    "/user/preferences",
+    {
+      token,
+    }
+  );
+
+  return normalizeUserPreferences(payload);
+}
+
+export async function updateUserPreferencesRequest(
+  preferences: UserPreferences
+): Promise<UserPreferences> {
+  const payload = await apiRequest<UserPreferences | UserPreferencesResponse>(
+    "/user/preferences",
+    {
+      method: "PUT",
+      body: {
+        preferences,
+      },
+    }
+  );
+
+  return normalizeUserPreferences(payload);
+}
+
 export async function createSession(input: { name: string; password?: string }) {
   const session = await apiRequest<BackendSession>("/sessions", {
     method: "POST",
@@ -381,6 +490,7 @@ export async function createSession(input: { name: string; password?: string }) 
     name: session.name,
     gm: currentUser,
     createdAt: new Date(session.createdAt),
+    isParticipant: true,
   } satisfies SessionSummary;
 }
 

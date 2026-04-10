@@ -3,7 +3,14 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { login } from "@/src/services/auth";
-import { ApiError, setAuthSession } from "@/src/services/api";
+import {
+  applyTheme,
+  ApiError,
+  getThemeFromPreferences,
+  getUserPreferencesRequest,
+  saveUserPreferences,
+  setAuthSession,
+} from "@/src/services/api";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -29,6 +36,9 @@ export default function LoginPage() {
         password,
       });
 
+      const preferences = await getUserPreferencesRequest(response.token);
+      saveUserPreferences(preferences);
+      applyTheme(getThemeFromPreferences(preferences));
       setAuthSession(response.token, response.user.name, response.user.id);
       router.push("/sessions");
     } catch (err) {

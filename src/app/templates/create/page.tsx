@@ -3,11 +3,11 @@
 import type { DragEvent } from "react";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { AppSidebar } from "@/src/components/navigation/AppSidebar";
 import {
   ApiError,
   clearAuthSession,
   createTemplate,
-  getAuthUserName,
 } from "@/src/services/api";
 import { FieldType, TemplateField, TemplateSection } from "@/src/models/template";
 
@@ -98,46 +98,8 @@ function moveItem<T>(items: T[], fromIndex: number, toIndex: number) {
   return next;
 }
 
-function SidebarItem({
-  icon,
-  label,
-  href,
-  collapsed,
-  active = false,
-  onNavigate,
-}: {
-  icon: string;
-  label: string;
-  href: string;
-  collapsed: boolean;
-  active?: boolean;
-  onNavigate: (href: string) => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={() => onNavigate(href)}
-      className={`
-        flex items-center gap-3 rounded-lg px-3 py-2 text-left transition
-        ${
-          active
-            ? "bg-[var(--accent)]/10 text-[var(--accent-soft)]"
-            : "text-[var(--text-muted)] hover:bg-[var(--bg-card)] hover:text-[var(--text-primary)]"
-        }
-      `}
-      title={collapsed ? label : undefined}
-    >
-      <span className="text-base">{icon}</span>
-      {!collapsed && <span>{label}</span>}
-    </button>
-  );
-}
-
 export default function CreateTemplatePage() {
   const router = useRouter();
-  const currentUser = getAuthUserName() ?? "Voce";
-
-  const [isCollapsed, setIsCollapsed] = useState(false);
   const [templateName, setTemplateName] = useState("");
   const [templateDescription, setTemplateDescription] = useState("");
   const [sections, setSections] = useState<BuilderSection[]>([
@@ -155,11 +117,6 @@ export default function CreateTemplatePage() {
   const [resizeState, setResizeState] = useState<ResizeState | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
-
-  function handleLogout() {
-    clearAuthSession();
-    router.push("/login");
-  }
 
   async function handleSaveTemplate() {
     const normalizedName = templateName.trim();
@@ -459,72 +416,7 @@ export default function CreateTemplatePage() {
       </svg>
 
       <div className="relative z-10 flex min-h-screen">
-        <aside
-          className={`
-            relative flex flex-col border-r border-[var(--border-primary)] bg-[var(--bg-secondary)] px-4 py-8
-            transition-all duration-300 ease-in-out
-            ${isCollapsed ? "w-20" : "w-64"}
-          `}
-        >
-          <button
-            type="button"
-            onClick={() => setIsCollapsed((prev) => !prev)}
-            className="absolute top-4 right-4 text-[var(--text-muted)] transition hover:text-[var(--text-primary)]"
-          >
-            <svg
-              className={`h-4 w-4 transition-transform duration-300 ${isCollapsed ? "rotate-180" : ""}`}
-              viewBox="0 0 24 24"
-              fill="currentColor"
-            >
-              <path d="M15 18l-6-6 6-6" />
-            </svg>
-          </button>
-
-          <div className="mt-6 mb-10 flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full border border-[var(--accent)]/40 bg-[var(--accent)]/20 text-sm font-medium shadow-[0_0_15px_rgba(124,58,237,0.3)]">
-              <span>{currentUser.charAt(0).toUpperCase()}</span>
-            </div>
-
-            {!isCollapsed && (
-              <div>
-                <div className="text-sm font-medium">{currentUser}</div>
-                <div className="text-xs text-[var(--text-muted)]">Criador</div>
-              </div>
-            )}
-          </div>
-
-          <nav className="mt-4 flex flex-col gap-4 text-sm">
-            <SidebarItem
-              icon="S"
-              label="Sessoes"
-              href="/sessions"
-              collapsed={isCollapsed}
-              onNavigate={router.push}
-            />
-            <SidebarItem
-              icon="T"
-              label="Templates"
-              href="/templates"
-              collapsed={isCollapsed}
-              active
-              onNavigate={router.push}
-            />
-          </nav>
-
-          <div className="mt-auto">
-            <button
-              type="button"
-              onClick={handleLogout}
-              className="mb-3 w-full rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-card)] px-4 py-2 text-sm transition hover:border-[var(--accent)]/40"
-            >
-              Logout
-            </button>
-          </div>
-
-          <div className="text-xs text-[var(--text-muted)]">
-            {!isCollapsed && "Portal Arcano"}
-          </div>
-        </aside>
+        <AppSidebar activeSection="templates" subtitle="Criador" />
 
         <main className="flex-1 overflow-y-auto px-6 py-8 md:px-10 md:py-10 xl:px-12 xl:py-12">
           <div className="mx-auto max-w-7xl">
