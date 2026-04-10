@@ -402,7 +402,9 @@ function toNullableString(value: unknown): string | null {
   return null;
 }
 
-function normalizeUserPreferences(payload: UserPreferences | UserPreferencesResponse | null) {
+function normalizeUserPreferences(
+  payload: UserPreferences | UserPreferencesResponse | null
+): UserPreferences {
   if (!payload) return {};
 
   if (
@@ -411,7 +413,7 @@ function normalizeUserPreferences(payload: UserPreferences | UserPreferencesResp
     typeof payload.preferences === "object" &&
     !Array.isArray(payload.preferences)
   ) {
-    return payload.preferences;
+    return payload.preferences as UserPreferences;
   }
 
   return payload as UserPreferences;
@@ -456,7 +458,9 @@ export async function getUserPreferencesRequest(token?: string | null) {
   return normalizeUserPreferences(payload);
 }
 
-export async function updateUserPreferencesRequest(preferences: UserPreferences) {
+export async function updateUserPreferencesRequest(
+  preferences: UserPreferences
+): Promise<UserPreferences> {
   const payload = await apiRequest<UserPreferences | UserPreferencesResponse>(
     "/user/preferences",
     {
